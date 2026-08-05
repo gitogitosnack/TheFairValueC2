@@ -3,7 +3,10 @@
     "allow": [
       "mcp__ide__getDiagnostics",
       "Bash(Test-Path *)",
-      "Bash(mvn clean *)"
+      "Bash(mvn clean *)",
+      "PowerShell(Get-Service *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(claude *)"
     ]
   }
 }

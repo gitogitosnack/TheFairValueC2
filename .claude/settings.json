@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean compile)",
+      "Bash(mvn compile)",
+      "Bash(mvn -q compile)",
+      "Bash(mvn spring-boot:run)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx prettier:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "mcp__ide__getDiagnostics"
+    ]
+  }
+}
