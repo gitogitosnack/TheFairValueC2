@@ -6,15 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>国マスタ一覧</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/destyle.css@3.0.2/destyle.css">
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link rel="stylesheet" th:href="@{/css/stock-list.css}">
-    <link rel="stylesheet" th:href="@{/css/stock-list-modals.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/master-list.css}">
 </head>
 
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="nav-logo"><a th:href="@{/top}">StockAnalyzer</a></div>
+            <div class="nav-logo">
+                <a th:href="@{/top}"><i class="fa-solid fa-chart-line"></i>StockAnalyzer</a>
+            </div>
             <ul class="nav-menu">
                 <li><a th:href="@{/top}">銘柄一覧</a></li>
                 <li><a th:href="@{/countries}" class="active">国マスタ</a></li>
@@ -32,46 +33,58 @@
 
     <div class="container main-content">
         <header class="page-header">
-            <h1>国マスタ一覧</h1>
+            <h1><i class="fa-solid fa-earth-asia"></i>国マスタ一覧</h1>
         </header>
 
         <section class="search-section">
             <div class="search-box">
                 <input type="text" placeholder="国名・コードを入力（部分一致）" id="searchInput">
-                <button class="btn btn-primary">検索</button>
-                <button class="btn btn-secondary">クリア</button>
+                <button class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i>検索</button>
+                <button class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i>クリア</button>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-export">Excel出力</button>
+                <button class="btn btn-export"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
             </div>
         </section>
 
         <section class="list-section">
             <div class="list-header">
-                <h2>登録国一覧</h2>
-                <button id="addCountryBtn" class="btn btn-success">+ 新規国登録</button>
+                <h2>
+                    <i class="fa-solid fa-list-ul"></i>登録国一覧
+                    <span class="record-count" th:text="'(' + ${items != null ? #lists.size(items) : 0} + '件)'">(0件)</span>
+                </h2>
+                <button id="addCountryBtn" class="btn btn-success"><i class="fa-solid fa-plus"></i>新規国登録</button>
             </div>
 
-            <table class="stock-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>コード</th>
-                        <th>国名</th>
-                        <th></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="item : ${items}">
-                        <td th:text="${item.id}">1</td>
-                        <td th:text="${item.code}">JP</td>
-                        <td th:text="${item.name}">日本</td>
-                        <td><a href="#" class="operation-link edit-link">編集</a></td>
-                        <td><a href="#" class="operation-link delete-link" th:data-id=${item.id}>削除</a></td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>コード</th>
+                            <th>国名</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="item : ${items}">
+                            <td th:text="${item.id}">1</td>
+                            <td class="code-cell" th:text="${item.code}">JP</td>
+                            <td class="main-cell" th:text="${item.name}">日本</td>
+                            <td class="action-cell"><a href="#" class="operation-link edit-link"><i
+                                        class="fa-solid fa-pen-to-square"></i>編集</a></td>
+                            <td class="action-cell"><a href="#" class="operation-link delete-link"
+                                    th:data-id=${item.id}><i class="fa-solid fa-trash-can"></i>削除</a></td>
+                        </tr>
+                        <tr th:if="${items == null or #lists.isEmpty(items)}">
+                            <td class="empty-cell" colspan="5">
+                                <i class="fa-regular fa-folder-open"></i>登録されている国がありません
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 
@@ -96,7 +109,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal">キャンセル</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i>保存</button>
                 </div>
             </form>
 

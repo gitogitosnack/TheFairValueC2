@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>銘柄一覧</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/destyle.css@3.0.2/destyle.css">
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link rel="stylesheet" th:href="@{/css/stock-list.css}">
-    <link rel="stylesheet" th:href="@{/css/stock-list-modals.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/master-list.css}">
 </head>
 <body>
 <!-- headerBar -->
     <nav class="navbar">
         <div class="nav-container">
-            <div class="nav-logo"><a th:href="@{/top}">StockAnalyzer</a></div>
+            <div class="nav-logo">
+                <a th:href="@{/top}"><i class="fa-solid fa-chart-line"></i>StockAnalyzer</a>
+            </div>
             <ul class="nav-menu">
                 <li><a th:href="@{/top}" class="active">銘柄一覧</a></li>
                 <li><a th:href="@{/countries}">国マスタ</a></li>
@@ -31,54 +32,67 @@
 
     <div class="container main-content">
         <header class="page-header">
-            <h1>銘柄管理ダッシュボード</h1>
+            <h1><i class="fa-solid fa-gauge-high"></i>銘柄管理ダッシュボード</h1>
         </header>
 
         <!-- search condition input area -->
         <section class="search-section">
             <div class="search-box">
                 <input type="text" placeholder="銘柄名・コードを入力（部分一致）" id="searchInput">
-                <button class="btn btn-primary">検索</button>
-                <button class="btn btn-secondary">クリア</button>
+                <button class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i>検索</button>
+                <button class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i>クリア</button>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-export">Excel出力</button>
+                <button class="btn btn-export"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
             </div>
         </section>
 
         <!-- search result display area -->
         <section class="list-section">
             <div class="list-header">
-                <h2>登録銘柄一覧</h2>
-                <button id="addStockBtn" class="btn btn-success">+ 新規銘柄登録</button>
+                <h2>
+                    <i class="fa-solid fa-list-ul"></i>登録銘柄一覧
+                    <span class="record-count"
+                        th:text="'(' + ${stockList != null ? #lists.size(stockList) : 0} + '件)'">(0件)</span>
+                </h2>
+                <button id="addStockBtn" class="btn btn-success"><i class="fa-solid fa-plus"></i>新規銘柄登録</button>
             </div>
 
-            <table class="stock-table">
-                <thead>
-                <tr>
-                    <th>コード</th>
-                    <th>銘柄名</th>
-                    <th>市場</th>
-                    <th>現在値</th>
-                    <th></th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="stock : ${stockList}" th:data-id="${stock.id}">
-                        <td>
-                            <a th:href="@{/stock-detail/{code}(code=${stock.code})}" th:text="${stock.code}">
-                                7203
-                            </a>
-                        </td>
-                        <td th:text="${stock.name}">トヨタ自動車</td>
-                        <td th:text="${stock.market_name}">東証プライム</td>
-                        <td>2,500.5</td>
-                        <td><a href="#" class="operation-link edit-link" th:data-id="${stock.id}">編集</a></td>
-                        <td><a href="#" class="operation-link delete-link" th:data-id="${stock.id}">削除</a></td>
+            <div class="table-scroll">
+                <table class="stock-table">
+                    <thead>
+                    <tr>
+                        <th>コード</th>
+                        <th>銘柄名</th>
+                        <th>市場</th>
+                        <th class="num">現在値</th>
+                        <th></th>
+                        <th></th>
                     </tr>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <tr th:each="stock : ${stockList}" th:data-id="${stock.id}">
+                            <td>
+                                <a th:href="@{/stock-detail/{code}(code=${stock.code})}" th:text="${stock.code}">
+                                    7203
+                                </a>
+                            </td>
+                            <td class="main-cell" th:text="${stock.name}">トヨタ自動車</td>
+                            <td class="market-cell" th:text="${stock.market_name}">東証プライム</td>
+                            <td class="num">2,500.5</td>
+                            <td class="action-cell"><a href="#" class="operation-link edit-link"
+                                    th:data-id="${stock.id}"><i class="fa-solid fa-pen-to-square"></i>編集</a></td>
+                            <td class="action-cell"><a href="#" class="operation-link delete-link"
+                                    th:data-id="${stock.id}"><i class="fa-solid fa-trash-can"></i>削除</a></td>
+                        </tr>
+                        <tr th:if="${stockList == null or #lists.isEmpty(stockList)}">
+                            <td class="empty-cell" colspan="6">
+                                <i class="fa-regular fa-folder-open"></i>登録されている銘柄がありません
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 
@@ -111,7 +125,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal">キャンセル</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i>保存</button>
                 </div>
             </form>
         </div>

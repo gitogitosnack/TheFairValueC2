@@ -6,7 +6,9 @@
       "Bash(mvn clean *)",
       "PowerShell(Get-Service *)",
       "PowerShell(Get-NetTCPConnection *)",
-      "PowerShell(claude *)"
+      "PowerShell(claude *)",
+      "PowerShell(Test-NetConnection *)",
+      "PowerShell(mvn spring-boot:run *)"
     ]
   }
 }
