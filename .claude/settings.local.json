@@ -12,7 +12,9 @@
       "PowerShell(psql *)",
       "Bash(export PGPASSWORD=ninoharu)",
       "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"\\\\d company_valuation_parameter_defaults\")",
-      "Bash(mvn -q clean compile)"
+      "Bash(mvn -q clean compile)",
+      "PowerShell(Get-Process *)",
+      "Bash(curl -s http://localhost:8080/countries)"
     ]
   }
 }
