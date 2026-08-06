@@ -9,7 +9,7 @@ import org.seasar.doma.Id;
 import org.seasar.doma.Table;
 
 @Entity
-@Table(name = "company_valuation_model_parameters")
+@Table(name = "company_valuation_parameter_defaults")
 public class CompanyValuationParameterDefaultsEntity {
 
     @Id

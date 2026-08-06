@@ -7,6 +7,8 @@ import org.seasar.doma.GenerationType;
 import org.seasar.doma.Id;
 import org.seasar.doma.Table;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "valuation_parameters")
 public class ValuationParametersEntity {
@@ -28,7 +30,67 @@ public class ValuationParametersEntity {
     @Column(name = "display_order")
     private Integer displayOrder;
 
+    /** 単位。'PERCENT'（率）/ 'TIMES'（倍率）/ 'YEARS'（年数） */
+    @Column(name = "unit")
+    private String unit;
+
+    /** スライダーの下限 */
+    @Column(name = "min_value")
+    private BigDecimal minValue;
+
+    /** スライダーの上限 */
+    @Column(name = "max_value")
+    private BigDecimal maxValue;
+
+    /** スライダーの刻み幅 */
+    @Column(name = "step_value")
+    private BigDecimal stepValue;
+
+    /** 企業固有の既定値が無いときに使うモデル共通の既定値 */
+    @Column(name = "default_value")
+    private BigDecimal defaultValue;
+
     // Getters and Setters
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public BigDecimal getMinValue() {
+        return minValue;
+    }
+
+    public void setMinValue(BigDecimal minValue) {
+        this.minValue = minValue;
+    }
+
+    public BigDecimal getMaxValue() {
+        return maxValue;
+    }
+
+    public void setMaxValue(BigDecimal maxValue) {
+        this.maxValue = maxValue;
+    }
+
+    public BigDecimal getStepValue() {
+        return stepValue;
+    }
+
+    public void setStepValue(BigDecimal stepValue) {
+        this.stepValue = stepValue;
+    }
+
+    public BigDecimal getDefaultValue() {
+        return defaultValue;
+    }
+
+    public void setDefaultValue(BigDecimal defaultValue) {
+        this.defaultValue = defaultValue;
+    }
+
     public Integer getId() {
         return id;
     }

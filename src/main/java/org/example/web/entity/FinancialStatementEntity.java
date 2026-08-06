@@ -28,8 +28,9 @@ public class FinancialStatementEntity {
     @Column(name = "fiscal_year")
     private Integer fiscalYear;
 
+    // DB の型は varchar(2)（'Q1'〜'Q4'）
     @Column(name = "fiscal_quarter")
-    private Integer fiscalQuarter;
+    private String fiscalQuarter;
 
     @Column(name = "end_date")
     private LocalDate endDate;
@@ -120,11 +121,11 @@ public class FinancialStatementEntity {
         this.fiscalYear = fiscalYear;
     }
 
-    public Integer getFiscalQuarter() {
+    public String getFiscalQuarter() {
         return fiscalQuarter;
     }
 
-    public void setFiscalQuarter(Integer fiscalQuarter) {
+    public void setFiscalQuarter(String fiscalQuarter) {
         this.fiscalQuarter = fiscalQuarter;
     }
 

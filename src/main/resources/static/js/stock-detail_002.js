@@ -3,34 +3,288 @@ document.addEventListener("DOMContentLoaded", () => {
   // シミュレーションパラメータセクション
   // ===================================
 
+  // pv_calculator.js が読み込めていれば計算エンジンを準備する
+  const calculator =
+    typeof pv_calculator !== "undefined" ? new pv_calculator() : null;
+
+  // 単位コードに応じたスライダー表示用の単位記号
+  function unitSuffix(unit) {
+    if (unit === "TIMES") return "倍";
+    if (unit === "YEARS") return "年";
+    return "%";
+  }
+
+  // モデルごとの現在のパラメータ値を保持するワーキングコピー。
+  // スライダー操作で書き換わり、再計算のたびにこの値を使う。
+  // { [modelId]: { modelCode, parameters: {code: value}, parameterDefs: [...] } }
+  const modelState = {};
+  (typeof theoreticalModels !== "undefined" ? theoreticalModels : []).forEach(
+    (model) => {
+      const parameters = {};
+      (model.parameters || []).forEach((p) => {
+        parameters[p.parameterCode] =
+          p.defaultValue != null ? Number(p.defaultValue) : 0;
+      });
+      modelState[model.modelId] = {
+        modelCode: model.modelCode,
+        parameters: parameters,
+        parameterDefs: model.parameters || [],
+      };
+    },
+  );
+
   // << 将来5年間の成長率, 永久成長率(sliderの設定・動きを複数同時に制御) >>
-  // 1. ページ内のすべてのスライダーグループを取得
-  const groups = document.querySelectorAll(".slider-param-group");
+  // 1. モデルごとのパラメータグループを取得し、スライダーが動いたら
+  //    ラベル表示とワーキングコピーの両方を更新する。
+  document.querySelectorAll(".model-param-group").forEach((modelGroup) => {
+    const modelId = modelGroup.dataset.modelId;
 
-  // 2. それぞれのグループに対して、個別にイベントを設定する
-  groups.forEach((group) => {
-    // グループ「内」にあるスライダーと表示用要素をピンポイントで取得
-    const slider = group.querySelector(".slider");
-    const valueDisplay = group.querySelector(".slider-value");
+    modelGroup.querySelectorAll(".slider-param-group").forEach((group) => {
+      // グループ「内」にあるスライダーと表示用要素をピンポイントで取得
+      const slider = group.querySelector(".slider");
+      const valueDisplay = group.querySelector(".slider-value");
+      const unit = slider.dataset.unit;
+      const parameterCode = slider.dataset.parameterCode;
 
-    // 初期状態の数値（HTMLに書いた初期値）を反映させる
-    const initialValue = parseFloat(slider.value);
-    valueDisplay.textContent = `${initialValue.toFixed(1)}%`;
+      const updateLabel = (value) => {
+        valueDisplay.textContent = `${parseFloat(value).toFixed(2)}${unitSuffix(unit)}`;
+      };
 
-    // そのグループのスライダーが動いたときだけ、同じグループのラベルを書き換える
-    slider.addEventListener("input", (event) => {
-      const currentValue = parseFloat(event.target.value);
-      valueDisplay.textContent = `${currentValue.toFixed(1)}%`;
+      // 初期状態の数値（HTMLに書いた初期値）を反映させる
+      updateLabel(slider.value);
+
+      // スライダーが動くたびに、ラベル・ワーキングコピーの更新に加えて
+      // その場で理論株価を再計算し画面に反映する（ボタン操作は不要）
+      slider.addEventListener("input", (event) => {
+        const currentValue = parseFloat(event.target.value);
+        updateLabel(currentValue);
+        if (modelState[modelId]) {
+          modelState[modelId].parameters[parameterCode] = currentValue;
+        }
+        recalculateAndRender();
+      });
     });
   });
+
+  // 円表示用のフォーマッタ（小数第1位まで）
+  function formatYen(value) {
+    return new Intl.NumberFormat("ja-JP", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(value);
+  }
+
+  // モデル1件分の理論株価（点推定値 + パラメータ感応度レンジ）を算出する。
+  // 算出に必要なデータが無い/パラメータが不正な場合は { error } を返す。
+  function evaluateModel(state) {
+    if (!calculator) {
+      return { error: "計算エンジンを読み込めませんでした。" };
+    }
+
+    let point;
+    try {
+      point = calculator.calculate(
+        state.modelCode,
+        state.parameters,
+        typeof financialData !== "undefined" ? financialData : {},
+      );
+    } catch (error) {
+      return { error: error.message };
+    }
+
+    // 各パラメータをスライダーの下限/上限まで振ったときの理論株価から
+    // 感応度レンジ（低位〜高位の目安）を作る。
+    const minParams = Object.assign({}, state.parameters);
+    const maxParams = Object.assign({}, state.parameters);
+    state.parameterDefs.forEach((def) => {
+      if (def.minValue != null) {
+        minParams[def.parameterCode] = Number(def.minValue);
+      }
+      if (def.maxValue != null) {
+        maxParams[def.parameterCode] = Number(def.maxValue);
+      }
+    });
+
+    let low = point;
+    let high = point;
+    try {
+      const atMin = calculator.calculate(state.modelCode, minParams, financialData);
+      const atMax = calculator.calculate(state.modelCode, maxParams, financialData);
+      low = Math.min(atMin, atMax, point);
+      high = Math.max(atMin, atMax, point);
+    } catch (rangeError) {
+      // レンジ側の算出に失敗しても、点推定が出ていればそれだけで表示を続ける
+      low = point;
+      high = point;
+    }
+
+    return { point: point, low: low, high: high };
+  }
 
   // ===================================
   // 理論株価レンジ比較セクション
   // ===================================
 
+  // 1行分（1モデル分）のレンジバー・判定ラベルを描画する
+  function renderRangeRow(row, result) {
+    const judgementEl = row.querySelector('[data-role="price-judgement"]');
+    const rangeBarEl = row.querySelector('[data-role="range-bar"]');
+    const priceMarkerEl = row.querySelector('[data-role="price-marker"]');
+    const insufficientEl = row.querySelector(
+      '[data-role="insufficient-message"]',
+    );
+
+    if (result.error) {
+      judgementEl.textContent = "算出不可";
+      judgementEl.className = "font-mono font-bold text-gray-500";
+      rangeBarEl.classList.add("hidden");
+      priceMarkerEl.classList.add("hidden");
+      if (insufficientEl) {
+        insufficientEl.textContent = result.error;
+        insufficientEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (insufficientEl) {
+      insufficientEl.classList.add("hidden");
+    }
+    rangeBarEl.classList.remove("hidden");
+    priceMarkerEl.classList.remove("hidden");
+
+    // 現在株価との乖離率で 割安 / 割高 / 適正水準 を判定する
+    const cp = typeof currentPrice !== "undefined" ? currentPrice : 0;
+    const diffRatio = result.point !== 0 ? (cp - result.point) / result.point : 0;
+
+    let judgementClass;
+    let judgementLabel;
+    if (diffRatio <= -0.05) {
+      judgementLabel = "割高";
+      judgementClass = "font-mono font-bold text-rose-400";
+    } else if (diffRatio >= 0.05) {
+      judgementLabel = "割安";
+      judgementClass = "font-mono font-bold text-emerald-400";
+    } else {
+      judgementLabel = "適正水準";
+      judgementClass = "font-mono font-bold text-gray-300";
+    }
+    judgementEl.textContent = `${formatYen(result.point)} 円 (${judgementLabel})`;
+    judgementEl.className = judgementClass;
+
+    // レンジと現在株価の両方が収まるよう余白を持たせた表示スケールを作る
+    const scaleMin = Math.min(result.low, cp) * 0.85;
+    const scaleMax = Math.max(result.high, cp) * 1.15;
+    const scaleWidth = scaleMax - scaleMin || 1;
+    const toPercent = (value) =>
+      Math.min(100, Math.max(0, ((value - scaleMin) / scaleWidth) * 100));
+
+    const leftPercent = toPercent(result.low);
+    const rightPercent = toPercent(result.high);
+    rangeBarEl.style.left = `${leftPercent}%`;
+    rangeBarEl.style.width = `${Math.max(rightPercent - leftPercent, 1)}%`;
+    priceMarkerEl.style.left = `${toPercent(cp)}%`;
+  }
+
   // ===================================
-  // 各モデル結果セクション
+  // 各モデル結果セクション（モデル別詳細カード）
   // ===================================
+
+  // 1枚分のモデル詳細カードの算出結果表示を描画する
+  function renderModelCard(card, result) {
+    const priceEl = card.querySelector('[data-role="card-price"]');
+    const unitEl = card.querySelector('[data-role="card-price-unit"]');
+    if (!priceEl) return;
+
+    if (result.error) {
+      priceEl.textContent = "算出不可";
+      priceEl.className = "text-base text-gray-500";
+      if (unitEl) unitEl.textContent = "";
+      return;
+    }
+
+    priceEl.textContent = formatYen(result.point);
+    priceEl.className = "";
+    if (unitEl) unitEl.textContent = "円";
+  }
+
+  // モデルごとに再計算し、レンジ比較行と詳細カードの両方を再描画する
+  function recalculateAndRender() {
+    Object.keys(modelState).forEach((modelId) => {
+      const result = evaluateModel(modelState[modelId]);
+
+      const row = document.querySelector(
+        `.range-row[data-model-id="${modelId}"]`,
+      );
+      if (row) {
+        renderRangeRow(row, result);
+      }
+
+      const card = document.querySelector(
+        `.model-card[data-model-id="${modelId}"]`,
+      );
+      if (card) {
+        renderModelCard(card, result);
+      }
+    });
+  }
+
+  // 初期表示時にDBの既定値で1回算出する
+  recalculateAndRender();
+
+  // ===================================
+  // パラメータ初期値の保存（DB更新）
+  // ===================================
+
+  // 「この値をパラメータ初期値としてDBに保存する」ボタン：
+  // スライダーの現在値を、この銘柄のパラメータ初期値としてDBに保存する。
+  // 数値の再計算自体はスライダー操作のたびに自動で行われるため、
+  // このボタンの役割は「再計算」ではなく「今の値を初期値として確定・保存」。
+  const saveDefaultsButton = document.getElementById("btn-save-defaults");
+  if (saveDefaultsButton) {
+    const defaultLabel = saveDefaultsButton.textContent;
+
+    saveDefaultsButton.addEventListener("click", () => {
+      const code = saveDefaultsButton.dataset.code;
+      const parameters = [];
+      Object.keys(modelState).forEach((modelId) => {
+        const state = modelState[modelId];
+        (state.parameterDefs || []).forEach((def) => {
+          const value = state.parameters[def.parameterCode];
+          if (value != null && !Number.isNaN(value)) {
+            parameters.push({ parameterId: def.parameterId, value: value });
+          }
+        });
+      });
+
+      if (!code || parameters.length === 0) {
+        return;
+      }
+
+      saveDefaultsButton.disabled = true;
+      saveDefaultsButton.textContent = "保存中...";
+
+      fetch(`/rest_stock_detail/${encodeURIComponent(code)}/parameter-defaults`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parameters: parameters }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("保存に失敗しました");
+          }
+          saveDefaultsButton.textContent = "保存しました";
+        })
+        .catch(() => {
+          saveDefaultsButton.textContent = "保存に失敗しました";
+        })
+        .finally(() => {
+          setTimeout(() => {
+            saveDefaultsButton.textContent = defaultLabel;
+            saveDefaultsButton.disabled = false;
+          }, 1500);
+        });
+    });
+  }
 
   // ===================================
   // 主要指標セクション

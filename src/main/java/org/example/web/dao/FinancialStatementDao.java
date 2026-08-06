@@ -16,6 +16,15 @@ public interface FinancialStatementDao {
     @Select
     Optional<FinancialStatementEntity> selectById(Long id);
 
+    /**
+     * 指定企業の最新の通期（Q4）決算データを 1 件取得します。
+     *
+     * @param companyId 企業ID
+     * @return 最新通期の財務諸表。存在しない場合は empty
+     */
+    @Select
+    Optional<FinancialStatementEntity> selectLatestAnnualByCompanyId(Integer companyId);
+
     @Insert
     int insert(FinancialStatementEntity entity);
 

@@ -90,7 +90,9 @@
           <!-- モデルごとにパラメータグループを表示 -->
           <div
             th:each="model : ${analysisData.theoreticalPriceValuationDto.models}"
-            class="space-y-4"
+            class="space-y-4 model-param-group"
+            th:data-model-id="${model.modelId}"
+            th:data-model-code="${model.modelCode}"
           >
             <!-- モデル名を表示（複数モデルが存在する場合に識別しやすいように） -->
             <div
@@ -102,41 +104,49 @@
             </div>
 
             <!-- パラメータの繰り返し描画（予約語対策のため変数名は p を使用） -->
-            <div th:each="p : ${model.parameters}" class="slider-param-group">
+            <div
+              th:each="p : ${model.parameters}"
+              class="slider-param-group"
+              th:data-unit="${p.unit}"
+            >
               <label class="block text-xs text-gray-400 mb-1">
                 <span th:text="${p.parameterName}">パラメータ名</span>:
                 <!-- JSで動的更新するための要素。初期値はDBから設定された値を表示 -->
                 <span
                   class="slider-value text-emerald-400 font-mono font-bold"
-                  th:text="${p.defaultValue != null ? p.defaultValue + '%' : '0.0%'}"
+                  th:text="${(p.defaultValue != null ? p.defaultValue : 0.0)} + (${p.unit == 'TIMES'} ? '倍' : (${p.unit == 'YEARS'} ? '年' : '%'))"
                 >
                   5.5%
                 </span>
               </label>
 
-              <!-- スライダー（DBの初期値・パラメータIDを埋め込む） -->
+              <!-- スライダー（DBのパラメータ定義・初期値・パラメータコードを埋め込む） -->
               <input
                 type="range"
-                min="0"
-                max="50"
-                step="0.1"
+                th:min="${p.minValue != null ? p.minValue : 0}"
+                th:max="${p.maxValue != null ? p.maxValue : 100}"
+                th:step="${p.stepValue != null ? p.stepValue : 0.1}"
                 th:value="${p.defaultValue != null ? p.defaultValue : 0.0}"
                 th:data-parameter-id="${p.parameterId}"
                 th:data-parameter-code="${p.parameterCode}"
+                th:data-unit="${p.unit}"
                 class="slider w-full accent-emerald-500 bg-gray-800 h-1.5
                   rounded-lg appearance-none cursor-pointer"
               />
             </div>
           </div>
 
+          <!-- スライダーの数値は動かすたびに自動で再計算されるため、このボタンは
+               現在のスライダー値をこの銘柄のパラメータ初期値としてDBに保存する用途 -->
           <button
             type="button"
-            id="btn-recalculate"
+            id="btn-save-defaults"
+            th:data-code="${analysisData.keyFinancialIndicatorDto.companyCode}"
             class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white
               font-medium text-sm py-2.5 px-4 rounded-lg transition-colors
               shadow-lg shadow-emerald-900/20"
           >
-            数値を再計算する
+            この値をパラメータ初期値としてDBに保存する
           </button>
         </div>
 
@@ -148,40 +158,59 @@
           >
             <h3 class="text-sm font-bold text-gray-300 mb-4 flex items-center">
               <i class="fa-solid fa-scale-balanced mr-2 text-emerald-400"></i>
-              理論株価レンジ比較（現在株価: 2,650.5円）
+              理論株価レンジ比較（現在株価:
+              <span
+                th:text="${#numbers.formatInteger(analysisData.keyFinancialIndicatorDto.currentPrice, 0, 'COMMA')}"
+                >2,650</span
+              >円）
             </h3>
 
             <div class="space-y-6 py-2">
               <!-- モデルの数だけ繰り返し描画 -->
               <div
                 th:each="model, iterStat : ${analysisData.theoreticalPriceValuationDto.models}"
+                class="range-row"
+                th:data-model-id="${model.modelId}"
+                th:data-model-code="${model.modelCode}"
               >
                 <div class="flex justify-between text-xs mb-1">
                   <span class="font-medium text-gray-300">
                     <span th:text="${iterStat.count}">1</span>.
                     <span th:text="${model.modelName}">DCF法</span>
                   </span>
-                  <!-- 動的な判定例 (値に応じて色変更) -->
-                  <span class="font-mono font-bold text-emerald-400">
-                    3,200.0 円 (割安)
+                  <!-- JSが算出結果と割安/割高の判定に応じて書き換える -->
+                  <span
+                    class="font-mono font-bold text-gray-500"
+                    data-role="price-judgement"
+                  >
+                    算出中...
                   </span>
                 </div>
 
                 <div
                   class="w-full bg-gray-800 h-4 rounded-full relative
                     overflow-hidden"
+                  data-role="range-track"
                 >
-                  <!-- 理論株価レンジバー -->
+                  <!-- 理論株価レンジバー（JSがleft/widthを設定） -->
                   <div
-                    class="absolute left-[30%] right-[20%] bg-emerald-500/30
-                      border-l border-r border-emerald-400 h-full"
+                    class="absolute bg-emerald-500/30 border-l border-r
+                      border-emerald-400 h-full hidden"
+                    data-role="range-bar"
                   ></div>
-                  <!-- 現在株価インジケーター -->
+                  <!-- 現在株価インジケーター（JSがleftを設定） -->
                   <div
-                    class="absolute left-[45%] w-1 bg-white h-full z-10
-                      shadow-[0_0_8px_#fff]"
+                    class="absolute w-1 bg-white h-full z-10
+                      shadow-[0_0_8px_#fff] hidden"
+                    data-role="price-marker"
                   ></div>
                 </div>
+                <p
+                  class="text-[11px] text-gray-500 mt-1 hidden"
+                  data-role="insufficient-message"
+                >
+                  対象企業の財務データが不足しているため、このモデルでは理論株価を算出できません。
+                </p>
               </div>
             </div>
 
@@ -219,11 +248,14 @@
           <!-- 取得件数に合わせてレスポンシブな列数を動的コントロール (例: 1列/2列/3列) -->
           <div
             class="grid grid-cols-1 gap-4"
-            th:classappend="${#lists.size(analysisData.theoreticalPriceValuationDto.models) >= 1} ? 'md:grid-cols-2' : (${#lists.size(analysisData.theoreticalPriceValuationDto.models) >= 3} ? 'md:grid-cols-3' : '')"
+            th:classappend="${#lists.size(analysisData.theoreticalPriceValuationDto.models) == 1} ? '' : (${#lists.size(analysisData.theoreticalPriceValuationDto.models) == 2} ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3')"
           >
             <div
               th:each="model : ${analysisData.theoreticalPriceValuationDto.models}"
-              class="bg-gray-950 border border-gray-800 rounded-xl p-4"
+              class="bg-gray-950 border border-gray-800 rounded-xl p-4
+                model-card"
+              th:data-model-id="${model.modelId}"
+              th:data-model-code="${model.modelCode}"
             >
               <div
                 class="text-xs text-emerald-400 font-bold mb-1"
@@ -233,16 +265,44 @@
               </div>
 
               <div class="text-xl font-mono font-bold text-white">
-                3,200 <span class="text-xs font-normal text-gray-400">円</span>
+                <span data-role="card-price">算出中...</span>
+                <span
+                  class="text-xs font-normal text-gray-400"
+                  data-role="card-price-unit"
+                ></span>
               </div>
 
-              <!-- パラメータリストから説明文や根拠を表示する場合 -->
-              <p class="text-[11px] text-gray-400 mt-2">
-                <span th:each="p : ${model.parameters}">
-                  <!-- <span th:text="${p.parameterName}">WACC</span>:
-                  <span th:text="${p.defaultValue}">5.5</span>% -->
-                </span>
+              <p
+                class="text-[11px] text-gray-500 mt-1"
+                th:text="${model.formulaDescription}"
+                th:if="${model.formulaDescription != null}"
+              >
+                理論株価 = ...
               </p>
+
+              <!-- モデルの特徴・使いどころ・メリット/デメリットの解説 -->
+              <div
+                class="mt-3 pt-3 border-t border-gray-900 space-y-2 text-[11px]
+                  text-gray-400 leading-relaxed"
+              >
+                <p th:if="${model.characteristics != null}">
+                  <span class="text-gray-300 font-semibold">特徴：</span
+                  ><span th:text="${model.characteristics}"></span>
+                </p>
+                <p th:if="${model.useCase != null}">
+                  <span class="text-gray-300 font-semibold"
+                    >使われる場面：</span
+                  ><span th:text="${model.useCase}"></span>
+                </p>
+                <p th:if="${model.advantages != null}">
+                  <span class="text-emerald-400 font-semibold">メリット：</span
+                  ><span th:text="${model.advantages}"></span>
+                </p>
+                <p th:if="${model.disadvantages != null}">
+                  <span class="text-rose-400 font-semibold">デメリット：</span
+                  ><span th:text="${model.disadvantages}"></span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -671,6 +731,13 @@
     <!-- <div th:insert="modals/stock-detail/compare-modal :: compareModal"></div> -->
 
     <script th:inline="javascript">
+      // 理論株価レンジ比較・モデル別詳細カードの算出に使うデータ
+      var theoreticalModels =
+        /*[[${analysisData.theoreticalPriceValuationDto.models}]]*/ [];
+      var financialData = /*[[${analysisData.financialDataDto}]]*/ {};
+      var currentPrice =
+        /*[[${analysisData.keyFinancialIndicatorDto.currentPrice}]]*/ 0;
+
       var chartData = {
         fiscalYearLabels:
           /*[[${analysisData.financialIndicatorDto.fiscalYearLabels}]]*/ [
@@ -726,6 +793,7 @@
       };
     </script>
 
+    <script th:src="@{/js/pv_calculator.js}"></script>
     <script th:src="@{/js/stock-detail_002.js}"></script>
   </body>
 </html>

@@ -5,8 +5,18 @@ public class StockAnalysisResponse {
     private TheoreticalPriceValuationDto theoreticalPriceValuationDto;
     private KeyFinancialIndicatorDto keyFinancialIndicatorDto;
     private FinancialIndicatorDto financialIndicatorDto;
+    /** 理論株価の算出に使う財務データ（フロントの pv_calculator に渡す） */
+    private FinancialDataDto financialDataDto;
 
     // Getter and Setter
+    public FinancialDataDto getFinancialDataDto() {
+        return financialDataDto;
+    }
+
+    public void setFinancialDataDto(FinancialDataDto financialDataDto) {
+        this.financialDataDto = financialDataDto;
+    }
+
     public TheoreticalPriceValuationDto getTheoreticalPriceValuationDto() {
         return theoreticalPriceValuationDto;
     }
