@@ -43,7 +43,7 @@
                 <button class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i>クリア</button>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-export"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
+                <button class="btn btn-export" th:data-export-url="@{/rest_stock_list/export}"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
             </div>
         </section>
 
@@ -65,6 +65,9 @@
                         <th>コード</th>
                         <th>銘柄名</th>
                         <th>市場</th>
+                        <th>国</th>
+                        <th>業種</th>
+                        <th>通貨</th>
                         <th class="num">現在値</th>
                         <th></th>
                         <th></th>
@@ -79,6 +82,9 @@
                             </td>
                             <td class="main-cell" th:text="${stock.name}">トヨタ自動車</td>
                             <td class="market-cell" th:text="${stock.market_name}">東証プライム</td>
+                            <td th:text="${stock.country_name}">日本</td>
+                            <td th:text="${stock.industry_name}">自動車</td>
+                            <td th:text="${stock.currency_name}">Japanese Yen</td>
                             <td class="num">2,500.5</td>
                             <td class="action-cell"><a href="#" class="operation-link edit-link"
                                     th:data-id="${stock.id}"><i class="fa-solid fa-pen-to-square"></i>編集</a></td>
@@ -86,7 +92,7 @@
                                     th:data-id="${stock.id}"><i class="fa-solid fa-trash-can"></i>削除</a></td>
                         </tr>
                         <tr th:if="${stockList == null or #lists.isEmpty(stockList)}">
-                            <td class="empty-cell" colspan="6">
+                            <td class="empty-cell" colspan="9">
                                 <i class="fa-regular fa-folder-open"></i>登録されている銘柄がありません
                             </td>
                         </tr>
@@ -134,6 +140,7 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script th:src="@{/js/master-list-search.js}"></script>
+    <script th:src="@{/js/master-list-export.js}"></script>
     <script th:src="@{/js/stock-list.js}"></script>
 </body>
 </html>

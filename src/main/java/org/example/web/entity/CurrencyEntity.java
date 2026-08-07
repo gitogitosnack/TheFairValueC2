@@ -21,6 +21,9 @@ public class CurrencyEntity {
     @Column(name = "symbol")
     private String symbol;
 
+    @Column(name = "name_en")
+    private String nameEn;
+
     // Getter and Setter
     public Integer getId() {
         return id;
@@ -44,5 +47,13 @@ public class CurrencyEntity {
 
     public void setSymbol(String symbol) {
         this.symbol = symbol;
+    }
+
+    public String getNameEn() {
+        return nameEn;
+    }
+
+    public void setNameEn(String nameEn) {
+        this.nameEn = nameEn;
     }
 }

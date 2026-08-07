@@ -43,7 +43,7 @@
                 <button class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i>クリア</button>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-export"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
+                <button class="btn btn-export" th:data-export-url="@{/rest_currencies/export}"><i class="fa-solid fa-file-excel"></i>Excel出力</button>
             </div>
         </section>
 
@@ -116,6 +116,7 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script th:src="@{/js/master-list-search.js}"></script>
+    <script th:src="@{/js/master-list-export.js}"></script>
     <script th:src="@{/js/currency.js}"></script>
 </body>
 
