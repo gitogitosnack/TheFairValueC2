@@ -33,7 +33,10 @@
       "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"select cvm.id, vm.model_name from company_valuation_models cvm join valuation_models vm on vm.id = cvm.valuation_model_id where cvm.company_id = 134;\")",
       "Bash(curl -s http://localhost:8080/stock-detail/1332 -o __TRACKED_VAR__/detail-carousel.html)",
       "Bash(grep -c 'model-card\"' __TRACKED_VAR__/detail-carousel.html)",
-      "Bash(grep -n 'modelCardCarousel\\\\|modelCardTrack\\\\|modelCardPrev\\\\|modelCardNext' __TRACKED_VAR__/detail-carousel.html)"
+      "Bash(grep -n 'modelCardCarousel\\\\|modelCardTrack\\\\|modelCardPrev\\\\|modelCardNext' __TRACKED_VAR__/detail-carousel.html)",
+      "Bash(curl -s http://localhost:8080/top)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8080/stock-detail/4452)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
