@@ -25,7 +25,15 @@
       "Bash(curl -s http://localhost:8080/stock-detail/4452)",
       "Bash(curl -s http://localhost:8080/stock-detail/4452 -o \"C:/Users/TA/AppData/Local/Temp/claude/C--Users-TA-java-projects-TheFairValueC2/a13697f0-7070-435d-a14c-8a5f98bd726b/scratchpad/check-logo.html\")",
       "Bash(curl -s http://localhost:8080/stock-detail/1332 -o __TRACKED_VAR__/detail-1332-cards.html)",
-      "Bash(grep -n 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3\\\\|model-card\"' __TRACKED_VAR__/detail-1332-cards.html)"
+      "Bash(grep -n 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3\\\\|model-card\"' __TRACKED_VAR__/detail-1332-cards.html)",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"select id, model_name, model_code from valuation_models order by id;\")",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"select * from company_valuation_models where company_id = 134;\")",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"\\\\d company_valuation_models\")",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"INSERT INTO company_valuation_models \\(company_id, valuation_model_id, is_active\\) VALUES \\(134, 3, true\\), \\(134, 6, true\\) ON CONFLICT \\(company_id, valuation_model_id\\) DO NOTHING;\")",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -c \"select cvm.id, vm.model_name from company_valuation_models cvm join valuation_models vm on vm.id = cvm.valuation_model_id where cvm.company_id = 134;\")",
+      "Bash(curl -s http://localhost:8080/stock-detail/1332 -o __TRACKED_VAR__/detail-carousel.html)",
+      "Bash(grep -c 'model-card\"' __TRACKED_VAR__/detail-carousel.html)",
+      "Bash(grep -n 'modelCardCarousel\\\\|modelCardTrack\\\\|modelCardPrev\\\\|modelCardNext' __TRACKED_VAR__/detail-carousel.html)"
     ]
   }
 }

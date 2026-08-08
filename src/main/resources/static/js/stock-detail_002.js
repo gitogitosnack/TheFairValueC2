@@ -536,6 +536,64 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===================================
+  // 評価モデルカード カルーセル
+  // ===================================
+
+  const modelCardCarousel = document.getElementById("modelCardCarousel");
+  if (modelCardCarousel) {
+    const track = document.getElementById("modelCardTrack");
+    const prevBtn = document.getElementById("modelCardPrev");
+    const nextBtn = document.getElementById("modelCardNext");
+    const cards = Array.from(track.children);
+
+    let currentIndex = 0;
+
+    // 隣り合うカードのoffsetLeftの差 = カード1枚分の幅 + gap
+    function getStep() {
+      if (cards.length < 2) return 0;
+      return cards[1].offsetLeft - cards[0].offsetLeft;
+    }
+
+    // 現在の表示幅で同時に見えているカード枚数を実測する
+    function getVisibleCount() {
+      const step = getStep();
+      if (step === 0) return cards.length;
+      return Math.max(1, Math.round(modelCardCarousel.clientWidth / step));
+    }
+
+    function update() {
+      const visibleCount = getVisibleCount();
+      const maxIndex = Math.max(0, cards.length - visibleCount);
+      currentIndex = Math.min(currentIndex, maxIndex);
+
+      const step = getStep();
+      track.style.transform = `translateX(-${currentIndex * step}px)`;
+
+      const showControls = cards.length > visibleCount;
+      [prevBtn, nextBtn].forEach((btn) => {
+        btn.classList.toggle("hidden", !showControls);
+        btn.classList.toggle("flex", showControls);
+      });
+      prevBtn.disabled = currentIndex <= 0;
+      nextBtn.disabled = currentIndex >= maxIndex;
+    }
+
+    prevBtn.addEventListener("click", () => {
+      currentIndex = Math.max(0, currentIndex - 1);
+      update();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      const maxIndex = Math.max(0, cards.length - getVisibleCount());
+      currentIndex = Math.min(maxIndex, currentIndex + 1);
+      update();
+    });
+
+    window.addEventListener("resize", update);
+    update();
+  }
+
+  // ===================================
   // 競合企業比較セクション（比較モーダル）
   // ===================================
 

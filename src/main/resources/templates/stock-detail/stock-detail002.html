@@ -244,66 +244,100 @@
             </p>
           </div>
 
-          <!-- ================= モデル別詳細カード (グリッド配置) ================= -->
-          <!-- カード1枚 = ページ全体のグリッド1カラム分の幅で固定表示。
-               登録モデルが4件以上ある場合は先頭3件のみ表示する
-               （4件以上の見せ方は別途カルーセルUIとして検討中）。 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div
-              th:each="model, modelStat : ${analysisData.theoreticalPriceValuationDto.models}"
-              th:if="${modelStat.index < 3}"
-              class="bg-gray-950 border border-gray-800 rounded-xl p-4
-                model-card"
-              th:data-model-id="${model.modelId}"
-              th:data-model-code="${model.modelCode}"
-            >
+          <!-- ================= モデル別詳細カード (カルーセル) ================= -->
+          <!-- カード1枚 = 表示中カラム(最大3枚)の1カラム分の幅で固定。
+               4件以上登録されている場合は左右ボタンで1枚ずつスライドする。 -->
+          <div class="relative" id="modelCardCarousel">
+            <div class="overflow-hidden">
               <div
-                class="text-xs text-emerald-400 font-bold mb-1"
-                th:text="${model.modelName}"
+                class="flex gap-4 transition-transform duration-300 ease-out"
+                id="modelCardTrack"
               >
-                DCF法
-              </div>
+                <div
+                  th:each="model : ${analysisData.theoreticalPriceValuationDto.models}"
+                  class="shrink-0 grow-0 basis-full
+                    md:basis-[calc((100%-1rem)/2)]
+                    xl:basis-[calc((100%-2rem)/3)] bg-gray-950 border
+                    border-gray-800 rounded-xl p-4 model-card"
+                  th:data-model-id="${model.modelId}"
+                  th:data-model-code="${model.modelCode}"
+                >
+                  <div
+                    class="text-xs text-emerald-400 font-bold mb-1"
+                    th:text="${model.modelName}"
+                  >
+                    DCF法
+                  </div>
 
-              <div class="text-xl font-mono font-bold text-white">
-                <span data-role="card-price">算出中...</span>
-                <span
-                  class="text-xs font-normal text-gray-400"
-                  data-role="card-price-unit"
-                ></span>
-              </div>
+                  <div class="text-xl font-mono font-bold text-white">
+                    <span data-role="card-price">算出中...</span>
+                    <span
+                      class="text-xs font-normal text-gray-400"
+                      data-role="card-price-unit"
+                    ></span>
+                  </div>
 
-              <p
-                class="text-[11px] text-gray-500 mt-1"
-                th:text="${model.formulaDescription}"
-                th:if="${model.formulaDescription != null}"
-              >
-                理論株価 = ...
-              </p>
+                  <p
+                    class="text-[11px] text-gray-500 mt-1"
+                    th:text="${model.formulaDescription}"
+                    th:if="${model.formulaDescription != null}"
+                  >
+                    理論株価 = ...
+                  </p>
 
-              <!-- モデルの特徴・使いどころ・メリット/デメリットの解説 -->
-              <div
-                class="mt-3 pt-3 border-t border-gray-900 space-y-2 text-[11px]
-                  text-gray-400 leading-relaxed"
-              >
-                <p th:if="${model.characteristics != null}">
-                  <span class="text-gray-300 font-semibold">特徴：</span
-                  ><span th:text="${model.characteristics}"></span>
-                </p>
-                <p th:if="${model.useCase != null}">
-                  <span class="text-gray-300 font-semibold"
-                    >使われる場面：</span
-                  ><span th:text="${model.useCase}"></span>
-                </p>
-                <p th:if="${model.advantages != null}">
-                  <span class="text-emerald-400 font-semibold">メリット：</span
-                  ><span th:text="${model.advantages}"></span>
-                </p>
-                <p th:if="${model.disadvantages != null}">
-                  <span class="text-rose-400 font-semibold">デメリット：</span
-                  ><span th:text="${model.disadvantages}"></span>
-                </p>
+                  <!-- モデルの特徴・使いどころ・メリット/デメリットの解説 -->
+                  <div
+                    class="mt-3 pt-3 border-t border-gray-900 space-y-2
+                      text-[11px] text-gray-400 leading-relaxed"
+                  >
+                    <p th:if="${model.characteristics != null}">
+                      <span class="text-gray-300 font-semibold">特徴：</span
+                      ><span th:text="${model.characteristics}"></span>
+                    </p>
+                    <p th:if="${model.useCase != null}">
+                      <span class="text-gray-300 font-semibold"
+                        >使われる場面：</span
+                      ><span th:text="${model.useCase}"></span>
+                    </p>
+                    <p th:if="${model.advantages != null}">
+                      <span class="text-emerald-400 font-semibold"
+                        >メリット：</span
+                      ><span th:text="${model.advantages}"></span>
+                    </p>
+                    <p th:if="${model.disadvantages != null}">
+                      <span class="text-rose-400 font-semibold"
+                        >デメリット：</span
+                      ><span th:text="${model.disadvantages}"></span>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <button
+              id="modelCardPrev"
+              type="button"
+              aria-label="前のモデルを表示"
+              class="hidden absolute left-0 top-1/2 -translate-y-1/2
+                -translate-x-1/2 w-9 h-9 rounded-full bg-gray-800
+                hover:bg-gray-700 border border-gray-700 text-white
+                items-center justify-center disabled:opacity-30
+                disabled:cursor-not-allowed disabled:hover:bg-gray-800"
+            >
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button
+              id="modelCardNext"
+              type="button"
+              aria-label="次のモデルを表示"
+              class="hidden absolute right-0 top-1/2 -translate-y-1/2
+                translate-x-1/2 w-9 h-9 rounded-full bg-gray-800
+                hover:bg-gray-700 border border-gray-700 text-white
+                items-center justify-center disabled:opacity-30
+                disabled:cursor-not-allowed disabled:hover:bg-gray-800"
+            >
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
