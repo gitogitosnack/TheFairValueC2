@@ -36,7 +36,8 @@
       "Bash(grep -n 'modelCardCarousel\\\\|modelCardTrack\\\\|modelCardPrev\\\\|modelCardNext' __TRACKED_VAR__/detail-carousel.html)",
       "Bash(curl -s http://localhost:8080/top)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8080/stock-detail/4452)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(curl -s http://localhost:8080/stock-detail/1332)"
     ]
   }
 }
