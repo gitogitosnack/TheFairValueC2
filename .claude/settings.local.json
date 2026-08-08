@@ -23,7 +23,9 @@
       "Bash(curl -s http://localhost:8080/stock-detail/4452 -o /tmp/stock-detail-out3.html)",
       "Bash(curl -s http://localhost:8080/stock-detail/4452 -o /tmp/stock-detail-out4.html)",
       "Bash(curl -s http://localhost:8080/stock-detail/4452)",
-      "Bash(curl -s http://localhost:8080/stock-detail/4452 -o \"C:/Users/TA/AppData/Local/Temp/claude/C--Users-TA-java-projects-TheFairValueC2/a13697f0-7070-435d-a14c-8a5f98bd726b/scratchpad/check-logo.html\")"
+      "Bash(curl -s http://localhost:8080/stock-detail/4452 -o \"C:/Users/TA/AppData/Local/Temp/claude/C--Users-TA-java-projects-TheFairValueC2/a13697f0-7070-435d-a14c-8a5f98bd726b/scratchpad/check-logo.html\")",
+      "Bash(curl -s http://localhost:8080/stock-detail/1332 -o __TRACKED_VAR__/detail-1332-cards.html)",
+      "Bash(grep -n 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3\\\\|model-card\"' __TRACKED_VAR__/detail-1332-cards.html)"
     ]
   }
 }
