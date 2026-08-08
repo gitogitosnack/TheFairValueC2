@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設定 - TheFairValue</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/destyle.css@3.0.2/destyle.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/master-list.css}">
+    <link rel="stylesheet" th:href="@{/css/settings.css}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a th:href="@{/top}"><i class="fa-solid fa-chart-line"></i>TheFairValue</a>
+            </div>
+            <ul class="nav-menu">
+                <li><a th:href="@{/top}">銘柄一覧</a></li>
+                <li><a th:href="@{/countries}">国マスタ</a></li>
+                <li><a th:href="@{/currencies}">通貨マスタ</a></li>
+                <li><a th:href="@{/industries}">業種マスタ</a></li>
+                <li><a th:href="@{/valuation-models}">評価モデル</a></li>
+                <li><a th:href="@{/settings}" class="active">設定</a></li>
+            </ul>
+            <div class="nav-user">
+                <span class="user-name">テスト太郎 様</span>
+                <button class="btn-logout">ログアウト</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-content">
+        <header class="page-header">
+            <h1><i class="fa-solid fa-gear"></i>設定</h1>
+        </header>
+
+        <div class="settings-grid">
+
+            <!-- ================= アカウント情報 ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-id-card"></i>アカウント情報</h2>
+                </div>
+
+                <div class="account-header">
+                    <div class="avatar-circle">テ</div>
+                    <div class="account-header-text">
+                        <div class="account-name">テスト太郎</div>
+                        <div class="account-email">test.taro@example.com</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="accountName">表示名</label>
+                    <input type="text" id="accountName" value="テスト太郎">
+                </div>
+                <div class="form-group">
+                    <label for="accountEmail">メールアドレス</label>
+                    <input type="text" id="accountEmail" value="test.taro@example.com">
+                </div>
+
+                <div class="settings-actions">
+                    <span class="save-toast" data-role="account-toast"><i class="fa-solid fa-circle-check"></i>保存しました</span>
+                    <button type="button" class="btn btn-primary" data-role="save-account">
+                        <i class="fa-solid fa-floppy-disk"></i>変更を保存
+                    </button>
+                </div>
+            </section>
+
+            <!-- ================= セキュリティ ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-lock"></i>セキュリティ</h2>
+                </div>
+                <p class="settings-section-desc">パスワードを変更します。他のサービスと同じパスワードは使い回さないでください。</p>
+
+                <div class="form-group">
+                    <label for="currentPassword">現在のパスワード</label>
+                    <input type="password" id="currentPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">新しいパスワード</label>
+                    <input type="password" id="newPassword" placeholder="8文字以上">
+                </div>
+                <div class="form-group">
+                    <label for="newPasswordConfirm">新しいパスワード（確認）</label>
+                    <input type="password" id="newPasswordConfirm" placeholder="8文字以上">
+                </div>
+
+                <div class="settings-actions">
+                    <span class="save-toast" data-role="password-toast"><i class="fa-solid fa-circle-check"></i>変更しました</span>
+                    <button type="button" class="btn btn-primary" data-role="save-password">
+                        <i class="fa-solid fa-key"></i>パスワードを変更
+                    </button>
+                </div>
+            </section>
+
+            <!-- ================= 表示設定 ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-table-cells"></i>表示設定</h2>
+                </div>
+                <p class="settings-section-desc">銘柄一覧・銘柄詳細画面での表示方法の既定値です。</p>
+
+                <div class="form-group">
+                    <label for="defaultCurrency">既定の表示通貨</label>
+                    <select id="defaultCurrency">
+                        <option value="JPY" selected>日本円 (JPY)</option>
+                        <option value="USD">米ドル (USD)</option>
+                        <option value="EUR">ユーロ (EUR)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="listPageSize">一覧の表示件数</label>
+                    <select id="listPageSize">
+                        <option value="20">20件</option>
+                        <option value="50" selected>50件</option>
+                        <option value="100">100件</option>
+                    </select>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">数値を3桁区切りで表示</div>
+                        <div class="toggle-desc">例: 1,234,567</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-actions">
+                    <span class="save-toast" data-role="display-toast"><i class="fa-solid fa-circle-check"></i>保存しました</span>
+                    <button type="button" class="btn btn-primary" data-role="save-display">
+                        <i class="fa-solid fa-floppy-disk"></i>変更を保存
+                    </button>
+                </div>
+            </section>
+
+            <!-- ================= テーマカラー ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-palette"></i>テーマカラー</h2>
+                </div>
+                <p class="settings-section-desc">アクセントカラーと表示モードを選択できます（サンプル表示のみで、他画面には反映されません）。</p>
+
+                <div class="form-group">
+                    <label>アクセントカラー</label>
+                    <div class="swatch-row" data-role="color-swatches">
+                        <button type="button" class="color-swatch selected" style="background:#10b981" data-color="emerald" aria-label="エメラルド"></button>
+                        <button type="button" class="color-swatch" style="background:#2563eb" data-color="blue" aria-label="ブルー"></button>
+                        <button type="button" class="color-swatch" style="background:#7c3aed" data-color="violet" aria-label="バイオレット"></button>
+                        <button type="button" class="color-swatch" style="background:#f59e0b" data-color="amber" aria-label="アンバー"></button>
+                        <button type="button" class="color-swatch" style="background:#f43f5e" data-color="rose" aria-label="ローズ"></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>表示モード</label>
+                    <div class="mode-toggle-row" data-role="mode-toggle">
+                        <button type="button" class="mode-toggle-btn active" data-mode="dark">
+                            <i class="fa-solid fa-moon"></i>ダーク
+                        </button>
+                        <button type="button" class="mode-toggle-btn" data-mode="light">
+                            <i class="fa-solid fa-sun"></i>ライト
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= 通知設定 ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-bell"></i>通知設定</h2>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">価格アラートのメール通知</div>
+                        <div class="toggle-desc">登録銘柄が理論株価から一定以上乖離したら通知します</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">週次サマリーメール</div>
+                        <div class="toggle-desc">保有銘柄・ウォッチリストの週次レポートを受け取る</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">決算発表前リマインド</div>
+                        <div class="toggle-desc">保有銘柄の決算発表日が近づいたら通知します</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="settings-actions">
+                    <span class="save-toast" data-role="notification-toast"><i class="fa-solid fa-circle-check"></i>保存しました</span>
+                    <button type="button" class="btn btn-primary" data-role="save-notifications">
+                        <i class="fa-solid fa-floppy-disk"></i>変更を保存
+                    </button>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ================= ログアウト（危険操作エリア） ================= -->
+        <section class="list-section danger-zone" style="margin-top: 20px;">
+            <div class="list-header">
+                <h2><i class="fa-solid fa-right-from-bracket"></i>ログアウト</h2>
+            </div>
+            <div class="danger-zone-row">
+                <p>このデバイスからログアウトします。再度利用するにはログインが必要です。</p>
+                <button type="button" class="btn btn-danger" id="btn-logout-settings">
+                    <i class="fa-solid fa-right-from-bracket"></i>ログアウトする
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <script th:src="@{/js/settings.js}"></script>
+</body>
+</html>
