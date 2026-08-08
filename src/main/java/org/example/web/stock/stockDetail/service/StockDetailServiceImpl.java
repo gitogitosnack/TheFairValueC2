@@ -332,16 +332,20 @@ public class StockDetailServiceImpl implements StockDetailService {
         List<String> fiscalYearLabels = new ArrayList<>();
         List<Double> roeList = new ArrayList<>();
         List<Double> grossMarginList = new ArrayList<>();
+        List<Double> sgaRatioList = new ArrayList<>();
         List<Double> netMarginList = new ArrayList<>();
+        List<Double> roaList = new ArrayList<>();
         List<Double> epsList = new ArrayList<>();
         List<Double> assetTurnoverList = new ArrayList<>();
         List<Double> inventoryTurnoverList = new ArrayList<>();
         List<Double> receivablesTurnoverList = new ArrayList<>();
         List<Double> equityRatioList = new ArrayList<>();
         List<Double> debtEquityRatioList = new ArrayList<>();
+        List<Double> debtRatioList = new ArrayList<>();
         List<Double> interestCoverageRatioList = new ArrayList<>();
-        List<Double> fcfList = new ArrayList<>();
         List<Double> operationCfMarginList = new ArrayList<>();
+        List<Double> fcfList = new ArrayList<>();
+        List<Double> finCfList = new ArrayList<>();
 
         for (int year = startYear; year <= endYear; year++) {
             fiscalYearLabels.add(String.valueOf(year));
@@ -350,45 +354,57 @@ public class StockDetailServiceImpl implements StockDetailService {
             if (entity != null) {
                 roeList.add(this.toDouble(entity.getRoe()));
                 grossMarginList.add(this.toDouble(entity.getGrossMargin()));
+                sgaRatioList.add(this.toDouble(entity.getSgaRatio()));
                 netMarginList.add(this.toDouble(entity.getNetMargin()));
+                roaList.add(this.toDouble(entity.getRoa()));
                 epsList.add(this.toDouble(entity.getEps()));
                 assetTurnoverList.add(this.toDouble(entity.getAssetTurnover()));
                 inventoryTurnoverList.add(this.toDouble(entity.getInventoryTurnover()));
                 receivablesTurnoverList.add(this.toDouble(entity.getArTurnover()));
                 equityRatioList.add(this.toDouble(entity.getEquityRatio()));
                 debtEquityRatioList.add(this.toDouble(entity.getDeRatio()));
+                debtRatioList.add(this.toDouble(entity.getDebtRatio()));
                 interestCoverageRatioList.add(this.toDouble(entity.getInterestCoverage()));
-                fcfList.add(this.toDouble(entity.getFcf()));
                 operationCfMarginList.add(this.toDouble(entity.getOpCfMargin()));
+                fcfList.add(this.toDouble(entity.getFcf()));
+                finCfList.add(this.toDouble(entity.getFinCf()));
             } else {
                 roeList.add(null);
                 grossMarginList.add(null);
+                sgaRatioList.add(null);
                 netMarginList.add(null);
+                roaList.add(null);
                 epsList.add(null);
                 assetTurnoverList.add(null);
                 inventoryTurnoverList.add(null);
                 receivablesTurnoverList.add(null);
                 equityRatioList.add(null);
                 debtEquityRatioList.add(null);
+                debtRatioList.add(null);
                 interestCoverageRatioList.add(null);
-                fcfList.add(null);
                 operationCfMarginList.add(null);
+                fcfList.add(null);
+                finCfList.add(null);
             }
         }
 
         financialIndicatorDto.setFiscalYearLabels(fiscalYearLabels);
         financialIndicatorDto.setRoeList(roeList);
         financialIndicatorDto.setGrossMarginList(grossMarginList);
+        financialIndicatorDto.setSgaRatioList(sgaRatioList);
         financialIndicatorDto.setNetMarginList(netMarginList);
+        financialIndicatorDto.setRoaList(roaList);
         financialIndicatorDto.setEpsList(epsList);
         financialIndicatorDto.setAssetTurnoverList(assetTurnoverList);
         financialIndicatorDto.setInventoryTurnoverList(inventoryTurnoverList);
         financialIndicatorDto.setReceivablesTurnoverList(receivablesTurnoverList);
         financialIndicatorDto.setEquityRatioList(equityRatioList);
         financialIndicatorDto.setDebtEquityRatioList(debtEquityRatioList);
+        financialIndicatorDto.setDebtRatioList(debtRatioList);
         financialIndicatorDto.setInterestCoverageRatioList(interestCoverageRatioList);
-        financialIndicatorDto.setFcfList(fcfList);
         financialIndicatorDto.setOperationCfMarginList(operationCfMarginList);
+        financialIndicatorDto.setFcfList(fcfList);
+        financialIndicatorDto.setFinCfList(finCfList);
     } // end of this method
 
     // ====================================================
@@ -466,18 +482,26 @@ public class StockDetailServiceImpl implements StockDetailService {
     // function to set the label name for each table and their rows.
     private void setupLabels(FinancialIndicatorDto dto) {
         // dto.setTableTitle("財務分析指標（5期推移）");
-        dto.setRoeLabel("ROE (%)");
-        dto.setGrossMarginLabel("売上高総利益率 (%)");
-        dto.setNetMarginLabel("売上高純利益率 (%)");
-        dto.setEpsLabel("EPS (円)");
-        dto.setAssetTurnoverLabel("総資産回転率 (回)");
-        dto.setInventoryTurnoverLabel("棚卸資産回転率 (回)");
-        dto.setReceivablesTurnoverLabel("売上債権回転率 (回)");
-        dto.setEquityRatioLabel("自己資本比率 (%)");
-        dto.setDebtEquityRatioLabel("D/Eレシオ (倍)");
-        dto.setInterestCoverageRatioLabel("インタレスト・カバレッジ・レシオ (倍)");
-        dto.setFcfLabel("フリーキャッシュフロー (百万円)");
-        dto.setOperationCfMarginLabel("営業CFマージン (%)");
+        // 収益・成長性タブ（①〜⑥）
+        dto.setRoeLabel("① ROE (%)");
+        dto.setGrossMarginLabel("② 売上高総利益率 (%)");
+        dto.setSgaRatioLabel("③ 売上高販管費率 (%)");
+        dto.setNetMarginLabel("④ 売上高純利益率 (%)");
+        dto.setRoaLabel("⑤ ROA (%)");
+        dto.setEpsLabel("⑥ EPS (円)");
+        // 効率性タブ（⑦〜⑨）
+        dto.setAssetTurnoverLabel("⑦ 総資産回転率 (回)");
+        dto.setInventoryTurnoverLabel("⑧ 棚卸資産回転率 (回)");
+        dto.setReceivablesTurnoverLabel("⑨ 売上債権回転率 (回)");
+        // 安全性タブ（⑩〜⑬）
+        dto.setEquityRatioLabel("⑩ 自己資本比率 (%)");
+        dto.setDebtEquityRatioLabel("⑪ D/Eレシオ (倍)");
+        dto.setDebtRatioLabel("⑫ 負債比率 (%)");
+        dto.setInterestCoverageRatioLabel("⑬ インタレスト・カバレッジ・レシオ (倍)");
+        // キャッシュフロータブ（⑭〜⑯）
+        dto.setOperationCfMarginLabel("⑭ 営業CFマージン (%)");
+        dto.setFcfLabel("⑮ フリーキャッシュフロー (百万円)");
+        dto.setFinCfLabel("⑯ 財務キャッシュフロー (百万円)");
     }
 
     // BigDecimalをDoubleに安全に変換する補助メソッド

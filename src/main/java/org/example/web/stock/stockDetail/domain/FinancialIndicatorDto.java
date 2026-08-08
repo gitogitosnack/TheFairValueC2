@@ -13,8 +13,12 @@ public class FinancialIndicatorDto {
     private List<Double> roeList;
     private String grossMarginLabel;
     private List<Double> grossMarginList;
+    private String sgaRatioLabel;
+    private List<Double> sgaRatioList;
     private String netMarginLabel;
     private List<Double> netMarginList;
+    private String roaLabel;
+    private List<Double> roaList;
     private String epsLabel;
     private List<Double> epsList;
 
@@ -31,14 +35,18 @@ public class FinancialIndicatorDto {
     private List<Double> equityRatioList;
     private String debtEquityRatioLabel;
     private List<Double> debtEquityRatioList;
+    private String debtRatioLabel;
+    private List<Double> debtRatioList;
     private String interestCoverageRatioLabel;
     private List<Double> interestCoverageRatioList;
 
     // 4th tab
-    private String fcfLabel;
-    private List<Double> fcfList;
     private String operationCfMarginLabel;
     private List<Double> operationCfMarginList;
+    private String fcfLabel;
+    private List<Double> fcfList;
+    private String finCfLabel;
+    private List<Double> finCfList;
 
     public String getTableTitle() {
         return tableTitle;
@@ -88,6 +96,22 @@ public class FinancialIndicatorDto {
         this.grossMarginList = grossMarginList;
     }
 
+    public String getSgaRatioLabel() {
+        return sgaRatioLabel;
+    }
+
+    public void setSgaRatioLabel(String sgaRatioLabel) {
+        this.sgaRatioLabel = sgaRatioLabel;
+    }
+
+    public List<Double> getSgaRatioList() {
+        return sgaRatioList;
+    }
+
+    public void setSgaRatioList(List<Double> sgaRatioList) {
+        this.sgaRatioList = sgaRatioList;
+    }
+
     public String getNetMarginLabel() {
         return netMarginLabel;
     }
@@ -102,6 +126,22 @@ public class FinancialIndicatorDto {
 
     public void setNetMarginList(List<Double> netMarginList) {
         this.netMarginList = netMarginList;
+    }
+
+    public String getRoaLabel() {
+        return roaLabel;
+    }
+
+    public void setRoaLabel(String roaLabel) {
+        this.roaLabel = roaLabel;
+    }
+
+    public List<Double> getRoaList() {
+        return roaList;
+    }
+
+    public void setRoaList(List<Double> roaList) {
+        this.roaList = roaList;
     }
 
     public String getEpsLabel() {
@@ -200,6 +240,22 @@ public class FinancialIndicatorDto {
         this.debtEquityRatioList = debtEquityRatioList;
     }
 
+    public String getDebtRatioLabel() {
+        return debtRatioLabel;
+    }
+
+    public void setDebtRatioLabel(String debtRatioLabel) {
+        this.debtRatioLabel = debtRatioLabel;
+    }
+
+    public List<Double> getDebtRatioList() {
+        return debtRatioList;
+    }
+
+    public void setDebtRatioList(List<Double> debtRatioList) {
+        this.debtRatioList = debtRatioList;
+    }
+
     public String getInterestCoverageRatioLabel() {
         return interestCoverageRatioLabel;
     }
@@ -246,5 +302,21 @@ public class FinancialIndicatorDto {
 
     public void setOperationCfMarginList(List<Double> operationCfMarginList) {
         this.operationCfMarginList = operationCfMarginList;
+    }
+
+    public String getFinCfLabel() {
+        return finCfLabel;
+    }
+
+    public void setFinCfLabel(String finCfLabel) {
+        this.finCfLabel = finCfLabel;
+    }
+
+    public List<Double> getFinCfList() {
+        return finCfList;
+    }
+
+    public void setFinCfList(List<Double> finCfList) {
+        this.finCfList = finCfList;
     }
 }

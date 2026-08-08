@@ -19,7 +19,11 @@
       "Read(//tmp/**)",
       "Bash(netstat -ano)",
       "Bash(PGPASSWORD=ninoharu /c/Program Files/PostgreSQL/16/bin/psql *)",
-      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -f \"db/migration/V002__company_competitors.sql\")"
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -f \"db/migration/V002__company_competitors.sql\")",
+      "Bash(curl -s http://localhost:8080/stock-detail/4452 -o /tmp/stock-detail-out3.html)",
+      "Bash(curl -s http://localhost:8080/stock-detail/4452 -o /tmp/stock-detail-out4.html)",
+      "Bash(curl -s http://localhost:8080/stock-detail/4452)",
+      "Bash(curl -s http://localhost:8080/stock-detail/4452 -o \"C:/Users/TA/AppData/Local/Temp/claude/C--Users-TA-java-projects-TheFairValueC2/a13697f0-7070-435d-a14c-8a5f98bd726b/scratchpad/check-logo.html\")"
     ]
   }
 }

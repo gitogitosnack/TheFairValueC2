@@ -18,12 +18,12 @@
         class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between
           items-center gap-4"
       >
-        <div class="flex items-center gap-3">
+        <a th:href="@{/top}" class="flex items-center gap-3">
           <i class="fa-solid fa-chart-line text-emerald-400 text-2xl"></i>
           <h1 class="text-xl font-bold tracking-wider text-white">
             ValueScope Pro
           </h1>
-        </div>
+        </a>
         <div class="relative w-full md:w-96">
           <input
             type="text"
@@ -416,7 +416,7 @@
               transition-all duration-200"
             data-tab="safety"
           >
-            <i class="fa-solid fa-shield-halved mr-1.5"></i>安全性 (⑩-⑭)
+            <i class="fa-solid fa-shield-halved mr-1.5"></i>安全性 (⑩-⑬)
           </button>
           <button
             class="tab-btn px-5 py-3 text-sm font-medium whitespace-nowrap
@@ -425,7 +425,7 @@
             data-tab="cashflow"
           >
             <i class="fa-solid fa-money-bill-trend-up mr-1.5"></i
-            >キャッシュフロー (⑮-⑰)
+            >キャッシュフロー (⑭-⑯)
           </button>
         </div>
 
@@ -471,7 +471,7 @@
                   </tr>
                   <tr class="hover:bg-gray-900/40">
                     <td class="p-4 text-gray-300" th:text="*{grossMarginLabel}">
-                      ① Gross Margin (%)
+                      ② Gross Margin (%)
                     </td>
                     <td
                       class="p-4 text-right font-mono"
@@ -482,8 +482,20 @@
                     </td>
                   </tr>
                   <tr class="hover:bg-gray-900/40">
+                    <td class="p-4 text-gray-300" th:text="*{sgaRatioLabel}">
+                      ③ 売上高販管費率 (%)
+                    </td>
+                    <td
+                      class="p-4 text-right font-mono"
+                      th:each="val : *{sgaRatioList}"
+                      th:text="${val != null ? val : 'NA'}"
+                    >
+                      12.0
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-gray-900/40">
                     <td class="p-4 text-gray-300" th:text="*{netMarginLabel}">
-                      ② Net Margin (%)
+                      ④ Net Margin (%)
                     </td>
                     <td
                       class="p-4 text-right font-mono"
@@ -491,6 +503,18 @@
                       th:text="${val != null ? val : 'NA'}"
                     >
                       8.0
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-gray-900/40">
+                    <td class="p-4 text-gray-300" th:text="*{roaLabel}">
+                      ⑤ ROA (%)
+                    </td>
+                    <td
+                      class="p-4 text-right font-mono"
+                      th:each="val : *{roaList}"
+                      th:text="${val != null ? val : 'NA'}"
+                    >
+                      6.5
                     </td>
                   </tr>
                   <tr class="hover:bg-gray-900/40">
@@ -621,7 +645,7 @@
                 <tbody class="divide-y divide-gray-800/40">
                   <tr class="hover:bg-gray-900/40">
                     <td class="p-4 text-gray-300" th:text="*{equityRatioLabel}">
-                      ⑫ 自己資本比率 (%)
+                      ⑩ 自己資本比率 (%)
                     </td>
                     <td
                       class="p-4 text-right font-mono"
@@ -636,7 +660,7 @@
                       class="p-4 text-gray-300"
                       th:text="*{debtEquityRatioLabel}"
                     >
-                      ⑩ D/Eレシオ
+                      ⑪ D/Eレシオ
                     </td>
                     <td
                       class="p-4 text-right font-mono"
@@ -647,11 +671,23 @@
                     </td>
                   </tr>
                   <tr class="hover:bg-gray-900/40">
+                    <td class="p-4 text-gray-300" th:text="*{debtRatioLabel}">
+                      ⑫ 負債比率 (%)
+                    </td>
+                    <td
+                      class="p-4 text-right font-mono"
+                      th:each="val : *{debtRatioList}"
+                      th:text="${val != null ? val : 'NA'}"
+                    >
+                      37.5
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-gray-900/40">
                     <td
                       class="p-4 text-gray-300"
                       th:text="*{interestCoverageRatioLabel}"
                     >
-                      ⑭ ICR (倍)
+                      ⑬ ICR (倍)
                     </td>
                     <td
                       class="p-4 text-right font-mono"
@@ -697,8 +733,23 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800/40">
+                  <tr class="hover:bg-gray-900/40">
+                    <td
+                      class="p-4 text-gray-300"
+                      th:text="*{operationCfMarginLabel}"
+                    >
+                      ⑭ 営業CFマージン
+                    </td>
+                    <td
+                      class="p-4 text-right font-mono"
+                      th:each="val : *{operationCfMarginList}"
+                      th:text="${val != null ? val : 'NA'}"
+                    >
+                      14.2
+                    </td>
+                  </tr>
                   <tr class="bg-blue-500/5 text-blue-300 font-medium">
-                    <td class="p-4" th:text="*{fcfLabel}">⑯ フリーCF</td>
+                    <td class="p-4" th:text="*{fcfLabel}">⑮ フリーCF</td>
                     <td
                       class="p-4 text-right font-mono"
                       th:each="val : *{fcfList}"
@@ -708,18 +759,15 @@
                     </td>
                   </tr>
                   <tr class="hover:bg-gray-900/40">
-                    <td
-                      class="p-4 text-gray-300"
-                      th:text="*{operationCfMarginLabel}"
-                    >
-                      ⑮ 営業CFマージン
+                    <td class="p-4 text-gray-300" th:text="*{finCfLabel}">
+                      ⑯ 財務CF
                     </td>
                     <td
                       class="p-4 text-right font-mono"
-                      th:each="val : *{operationCfMarginList}"
+                      th:each="val : *{finCfList}"
                       th:text="${val != null ? val : 'NA'}"
                     >
-                      14.2
+                      -300
                     </td>
                   </tr>
                 </tbody>
