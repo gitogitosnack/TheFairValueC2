@@ -1,57 +1,217 @@
-<div id="compareModal" class="modal" th:fragment="compareModal">
-    <div class="modal-content" style="max-width: 1240px; width: 98%;">
-        <div class="modal-header">
-            <h2>ベンチマーク比較分析（全16指標）</h2>
-            <span class="close-btn" id="closeCompareModal">&times;</span>
-        </div>
-        <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 0 20px;">
-            <table class="data-table small-table comparison-matrix">
-                <thead>
-                    <tr>
-                        <th rowspan="2" class="sticky-col">分析指標 (①〜⑯)</th>
-                        <th class="self-bg">対象銘柄</th>
-                        <th colspan="3">比較対象（競合）</th>
-                        <th colspan="2" class="bench-header">ベンチマーク</th>
-                    </tr>
-                    <tr>
-                        <th class="self-bg">自社 (4567)</th>
-                        <th>競合A</th>
-                        <th>競合B</th>
-                        <th>競合C</th>
-                        <th class="selected-avg-header">選択中平均</th>
-                        <th class="industry-avg-header">業界平均</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="group-header"><td colspan="7">📈 収益性・成長性</td></tr>
-                    <tr><td>① 売上高総利益率 (%)</td><td class="self-bg">35.0</td><td>32.1</td><td>28.5</td><td>30.0</td><td class="selected-avg">30.2</td><td class="industry-avg">30.5</td></tr>
-                    <tr><td>② 売上高営業利益率 (%)</td><td class="self-bg">9.5</td><td>7.2</td><td>6.8</td><td>8.0</td><td class="selected-avg">7.3</td><td class="industry-avg">7.5</td></tr>
-                    <tr><td>③ 売上高経常利益率 (%)</td><td class="self-bg">9.8</td><td>7.5</td><td>6.5</td><td>8.2</td><td class="selected-avg">7.4</td><td class="industry-avg">7.6</td></tr>
-                    <tr><td>④ 売上高当期純利益率 (%)</td><td class="self-bg">6.5</td><td>5.0</td><td>4.2</td><td>5.5</td><td class="selected-avg">4.9</td><td class="industry-avg">5.2</td></tr>
-                    <tr class="highlight-row"><td>⑤ ROE (自己資本利益率)</td><td class="self-bg">12.2</td><td>9.5</td><td>7.2</td><td>8.8</td><td class="selected-avg">8.5</td><td class="industry-avg">9.1</td></tr>
-                    <tr><td>⑥ EPS (1株当たり利益)</td><td class="self-bg">585</td><td>420</td><td>380</td><td>450</td><td class="selected-avg">416</td><td class="industry-avg">-</td></tr>
-
-                    <tr class="group-header"><td colspan="7">⚙️ 効率性</td></tr>
-                    <tr><td>⑦ 総資産回転率 (回)</td><td class="self-bg">1.2</td><td>1.0</td><td>0.8</td><td>1.1</td><td class="selected-avg">0.96</td><td class="industry-avg">0.90</td></tr>
-                    <tr><td>⑧ 在庫回転率 (回)</td><td class="self-bg">5.5</td><td>4.8</td><td>5.0</td><td>5.2</td><td class="selected-avg">5.0</td><td class="industry-avg">5.1</td></tr>
-                    <tr><td>⑨ 売上債権回転率 (回)</td><td class="self-bg">8.2</td><td>7.5</td><td>7.0</td><td>7.8</td><td class="selected-avg">7.4</td><td class="industry-avg">7.6</td></tr>
-
-                    <tr class="group-header"><td colspan="7">🛡️ 安全性</td></tr>
-                    <tr><td>⑩ D/Eレシオ (倍)</td><td class="self-bg">0.35</td><td>0.85</td><td>1.20</td><td>0.60</td><td class="selected-avg">0.88</td><td class="industry-avg">0.62</td></tr>
-                    <tr><td>⑪ 流動比率 (%)</td><td class="self-bg">210</td><td>155</td><td>120</td><td>180</td><td class="selected-avg">151</td><td class="industry-avg">165</td></tr>
-                    <tr class="highlight-row"><td>⑫ 自己資本比率 (%)</td><td class="self-bg">62.5</td><td>45.0</td><td>38.2</td><td>55.0</td><td class="selected-avg">46.1</td><td class="industry-avg">51.4</td></tr>
-                    <tr><td>⑬ 固定比率 (%)</td><td class="self-bg">85.0</td><td>110.0</td><td>145.0</td><td>95.0</td><td class="selected-avg">116.6</td><td class="industry-avg">105.0</td></tr>
-                    <tr><td>⑭ ICR (利息補償倍率)</td><td class="self-bg">25.0</td><td>12.5</td><td>8.2</td><td>18.0</td><td class="selected-avg">12.9</td><td class="industry-avg">15.0</td></tr>
-
-                    <tr class="group-header"><td colspan="7">💰 キャッシュフロー</td></tr>
-                    <tr><td>⑮ 営業CFマージン (%)</td><td class="self-bg">15.2</td><td>12.0</td><td>8.5</td><td>13.0</td><td class="selected-avg">11.1</td><td class="industry-avg">11.5</td></tr>
-                    <tr class="highlight-row"><td>⑯ フリーCF (百万円)</td><td class="self-bg">1,200</td><td>850</td><td>-120</td><td>400</td><td class="selected-avg">376</td><td class="industry-avg">-</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelCompareModal">閉じる</button>
-            <button class="btn btn-primary">CSV出力</button>
-        </div>
+<div
+  id="compareModal"
+  th:fragment="compareModal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4"
+>
+  <div
+    class="bg-gray-950 border border-gray-800 rounded-xl w-full max-w-5xl
+      max-h-[90vh] flex flex-col"
+  >
+    <div class="flex items-center justify-between p-5 border-b border-gray-800">
+      <h2 class="text-lg font-bold text-white">
+        競合・業界平均と比較（ベンチマーク比較分析）
+      </h2>
+      <button
+        id="closeCompareModal"
+        type="button"
+        class="text-gray-400 hover:text-white text-2xl leading-none"
+      >
+        &times;
+      </button>
     </div>
+
+    <!-- 競合企業管理（手動登録） -->
+    <div class="p-5 border-b border-gray-800">
+      <div class="flex items-center justify-between mb-3 gap-4">
+        <span class="text-sm font-semibold text-gray-200"
+          >登録済み競合企業（手動登録）</span
+        >
+        <span class="text-xs text-gray-500"
+          >※ 指標欄はダミー値です。先頭3社の企業名のみ下表の見出しに反映されます</span
+        >
+      </div>
+      <div id="competitorChips" class="flex flex-wrap gap-2 mb-3"></div>
+      <div class="flex gap-2 items-center">
+        <input
+          id="competitorSearchInput"
+          list="competitorCompanyOptions"
+          autocomplete="off"
+          placeholder="企業名またはコードで検索して選択..."
+          class="flex-1 bg-gray-800 text-sm rounded-lg px-3 py-2 border
+            border-gray-700 text-gray-100 placeholder-gray-500
+            focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+        <datalist id="competitorCompanyOptions"></datalist>
+        <button
+          id="addCompetitorBtn"
+          type="button"
+          class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm
+            font-medium px-4 py-2 rounded-lg whitespace-nowrap"
+        >
+          ＋ 競合を追加
+        </button>
+      </div>
+      <p id="competitorAddError" class="text-rose-400 text-xs mt-2 hidden"></p>
+    </div>
+
+    <!-- 指標比較テーブル（ダミー値） -->
+    <div class="p-5 overflow-y-auto">
+      <table class="w-full text-sm text-left border-collapse whitespace-nowrap">
+        <thead class="text-gray-400 text-xs uppercase">
+          <tr class="border-b border-gray-800">
+            <th class="py-2 pr-3 sticky left-0 bg-gray-950">
+              分析指標 (①〜⑯)
+            </th>
+            <th class="py-2 px-3 text-emerald-400" id="compareHeaderSelf">
+              自社
+            </th>
+            <th class="py-2 px-3" id="compareHeaderA">競合A</th>
+            <th class="py-2 px-3" id="compareHeaderB">競合B</th>
+            <th class="py-2 px-3" id="compareHeaderC">競合C</th>
+            <th class="py-2 px-3 text-gray-300">選択中平均</th>
+            <th class="py-2 px-3 text-gray-300">業界平均</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-200">
+          <tr>
+            <td colspan="7" class="pt-4 pb-1 text-xs font-semibold text-gray-500">
+              📈 収益性・成長性
+            </td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">① 売上高総利益率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">35.0</td>
+            <td class="py-1.5 px-3">32.1</td><td class="py-1.5 px-3">28.5</td><td class="py-1.5 px-3">30.0</td>
+            <td class="py-1.5 px-3 text-gray-300">30.2</td><td class="py-1.5 px-3 text-gray-300">30.5</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">② 売上高営業利益率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">9.5</td>
+            <td class="py-1.5 px-3">7.2</td><td class="py-1.5 px-3">6.8</td><td class="py-1.5 px-3">8.0</td>
+            <td class="py-1.5 px-3 text-gray-300">7.3</td><td class="py-1.5 px-3 text-gray-300">7.5</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">③ 売上高経常利益率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">9.8</td>
+            <td class="py-1.5 px-3">7.5</td><td class="py-1.5 px-3">6.5</td><td class="py-1.5 px-3">8.2</td>
+            <td class="py-1.5 px-3 text-gray-300">7.4</td><td class="py-1.5 px-3 text-gray-300">7.6</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">④ 売上高当期純利益率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">6.5</td>
+            <td class="py-1.5 px-3">5.0</td><td class="py-1.5 px-3">4.2</td><td class="py-1.5 px-3">5.5</td>
+            <td class="py-1.5 px-3 text-gray-300">4.9</td><td class="py-1.5 px-3 text-gray-300">5.2</td>
+          </tr>
+          <tr class="border-b border-gray-900 bg-emerald-950/20">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950 font-semibold">⑤ ROE (自己資本利益率)</td>
+            <td class="py-1.5 px-3 text-emerald-400 font-semibold">12.2</td>
+            <td class="py-1.5 px-3">9.5</td><td class="py-1.5 px-3">7.2</td><td class="py-1.5 px-3">8.8</td>
+            <td class="py-1.5 px-3 text-gray-300">8.5</td><td class="py-1.5 px-3 text-gray-300">9.1</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑥ EPS (1株当たり利益)</td>
+            <td class="py-1.5 px-3 text-emerald-400">585</td>
+            <td class="py-1.5 px-3">420</td><td class="py-1.5 px-3">380</td><td class="py-1.5 px-3">450</td>
+            <td class="py-1.5 px-3 text-gray-300">416</td><td class="py-1.5 px-3 text-gray-300">-</td>
+          </tr>
+
+          <tr>
+            <td colspan="7" class="pt-4 pb-1 text-xs font-semibold text-gray-500">
+              ⚙️ 効率性
+            </td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑦ 総資産回転率 (回)</td>
+            <td class="py-1.5 px-3 text-emerald-400">1.2</td>
+            <td class="py-1.5 px-3">1.0</td><td class="py-1.5 px-3">0.8</td><td class="py-1.5 px-3">1.1</td>
+            <td class="py-1.5 px-3 text-gray-300">0.96</td><td class="py-1.5 px-3 text-gray-300">0.90</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑧ 在庫回転率 (回)</td>
+            <td class="py-1.5 px-3 text-emerald-400">5.5</td>
+            <td class="py-1.5 px-3">4.8</td><td class="py-1.5 px-3">5.0</td><td class="py-1.5 px-3">5.2</td>
+            <td class="py-1.5 px-3 text-gray-300">5.0</td><td class="py-1.5 px-3 text-gray-300">5.1</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑨ 売上債権回転率 (回)</td>
+            <td class="py-1.5 px-3 text-emerald-400">8.2</td>
+            <td class="py-1.5 px-3">7.5</td><td class="py-1.5 px-3">7.0</td><td class="py-1.5 px-3">7.8</td>
+            <td class="py-1.5 px-3 text-gray-300">7.4</td><td class="py-1.5 px-3 text-gray-300">7.6</td>
+          </tr>
+
+          <tr>
+            <td colspan="7" class="pt-4 pb-1 text-xs font-semibold text-gray-500">
+              🛡️ 安全性
+            </td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑩ D/Eレシオ (倍)</td>
+            <td class="py-1.5 px-3 text-emerald-400">0.35</td>
+            <td class="py-1.5 px-3">0.85</td><td class="py-1.5 px-3">1.20</td><td class="py-1.5 px-3">0.60</td>
+            <td class="py-1.5 px-3 text-gray-300">0.88</td><td class="py-1.5 px-3 text-gray-300">0.62</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑪ 流動比率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">210</td>
+            <td class="py-1.5 px-3">155</td><td class="py-1.5 px-3">120</td><td class="py-1.5 px-3">180</td>
+            <td class="py-1.5 px-3 text-gray-300">151</td><td class="py-1.5 px-3 text-gray-300">165</td>
+          </tr>
+          <tr class="border-b border-gray-900 bg-emerald-950/20">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950 font-semibold">⑫ 自己資本比率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400 font-semibold">62.5</td>
+            <td class="py-1.5 px-3">45.0</td><td class="py-1.5 px-3">38.2</td><td class="py-1.5 px-3">55.0</td>
+            <td class="py-1.5 px-3 text-gray-300">46.1</td><td class="py-1.5 px-3 text-gray-300">51.4</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑬ 固定比率 (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">85.0</td>
+            <td class="py-1.5 px-3">110.0</td><td class="py-1.5 px-3">145.0</td><td class="py-1.5 px-3">95.0</td>
+            <td class="py-1.5 px-3 text-gray-300">116.6</td><td class="py-1.5 px-3 text-gray-300">105.0</td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑭ ICR (利息補償倍率)</td>
+            <td class="py-1.5 px-3 text-emerald-400">25.0</td>
+            <td class="py-1.5 px-3">12.5</td><td class="py-1.5 px-3">8.2</td><td class="py-1.5 px-3">18.0</td>
+            <td class="py-1.5 px-3 text-gray-300">12.9</td><td class="py-1.5 px-3 text-gray-300">15.0</td>
+          </tr>
+
+          <tr>
+            <td colspan="7" class="pt-4 pb-1 text-xs font-semibold text-gray-500">
+              💰 キャッシュフロー
+            </td>
+          </tr>
+          <tr class="border-b border-gray-900">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950">⑮ 営業CFマージン (%)</td>
+            <td class="py-1.5 px-3 text-emerald-400">15.2</td>
+            <td class="py-1.5 px-3">12.0</td><td class="py-1.5 px-3">8.5</td><td class="py-1.5 px-3">13.0</td>
+            <td class="py-1.5 px-3 text-gray-300">11.1</td><td class="py-1.5 px-3 text-gray-300">11.5</td>
+          </tr>
+          <tr class="bg-emerald-950/20">
+            <td class="py-1.5 pr-3 sticky left-0 bg-gray-950 font-semibold">⑯ フリーCF (百万円)</td>
+            <td class="py-1.5 px-3 text-emerald-400 font-semibold">1,200</td>
+            <td class="py-1.5 px-3">850</td><td class="py-1.5 px-3">-120</td><td class="py-1.5 px-3">400</td>
+            <td class="py-1.5 px-3 text-gray-300">376</td><td class="py-1.5 px-3 text-gray-300">-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-end gap-3 p-5 border-t border-gray-800">
+      <button
+        id="cancelCompareModal"
+        type="button"
+        class="px-4 py-2 rounded-lg text-sm text-gray-300 border
+          border-gray-700 hover:bg-gray-800"
+      >
+        閉じる
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500
+          text-white"
+      >
+        CSV出力
+      </button>
+    </div>
+  </div>
 </div>

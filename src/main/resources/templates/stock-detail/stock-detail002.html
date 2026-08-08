@@ -372,6 +372,8 @@
 
           <div class="flex justify-end w-full">
             <button
+              id="openCompareModal"
+              type="button"
               class="w-full bg-emerald-600 hover:bg-emerald-500 text-white
                 font-medium text-sm py-3 px-4 rounded-lg transition-colors
                 shadow-lg shadow-emerald-900/20 flex items-center justify-center
@@ -728,7 +730,7 @@
       </div>
     </main>
 
-    <!-- <div th:insert="modals/stock-detail/compare-modal :: compareModal"></div> -->
+    <div th:insert="modals/stock-detail/compare-modal :: compareModal"></div>
 
     <script th:inline="javascript">
       // 理論株価レンジ比較・モデル別詳細カードの算出に使うデータ
@@ -739,6 +741,10 @@
         /*[[${analysisData.keyFinancialIndicatorDto.currentPrice}]]*/ 0;
 
       var chartData = {
+        companyCode:
+          /*[[${analysisData.keyFinancialIndicatorDto.companyCode}]]*/ "",
+        companyName:
+          /*[[${analysisData.keyFinancialIndicatorDto.companyName}]]*/ "",
         fiscalYearLabels:
           /*[[${analysisData.financialIndicatorDto.fiscalYearLabels}]]*/ [
             "2022",

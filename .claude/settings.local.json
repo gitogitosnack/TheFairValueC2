@@ -17,7 +17,9 @@
       "Bash(curl -s http://localhost:8080/countries)",
       "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"\\\\d companies\")",
       "Read(//tmp/**)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(PGPASSWORD=ninoharu /c/Program Files/PostgreSQL/16/bin/psql *)",
+      "Bash(PGPASSWORD=ninoharu \"/c/Program Files/PostgreSQL/16/bin/psql\" -h localhost -U postgres -d db4thefairvalueC2 -f \"db/migration/V002__company_competitors.sql\")"
     ]
   }
 }

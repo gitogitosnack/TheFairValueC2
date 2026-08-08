@@ -536,6 +536,167 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===================================
+  // 競合企業比較セクション（比較モーダル）
+  // ===================================
+
+  const compareModal = document.getElementById("compareModal");
+  const competitorChips = document.getElementById("competitorChips");
+  const competitorSearchInput = document.getElementById(
+    "competitorSearchInput",
+  );
+  const competitorOptionsList = document.getElementById(
+    "competitorCompanyOptions",
+  );
+  const competitorAddError = document.getElementById("competitorAddError");
+  const openCompareModalBtn = document.getElementById("openCompareModal");
+
+  if (compareModal && openCompareModalBtn) {
+    let competitorOptionsLoaded = false;
+    let competitorLabelToCode = {};
+
+    function openModal() {
+      compareModal.classList.remove("hidden");
+      compareModal.classList.add("flex");
+    }
+
+    function closeModal() {
+      compareModal.classList.remove("flex");
+      compareModal.classList.add("hidden");
+    }
+
+    // 登録済み競合をチップ表示し、比較表見出し（先頭3社）に企業名を反映する
+    function renderCompetitorChips(competitors) {
+      competitorChips.innerHTML = "";
+
+      if (competitors.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "text-sm text-gray-500";
+        empty.textContent =
+          "登録済みの競合企業はありません。下の検索欄から追加してください。";
+        competitorChips.appendChild(empty);
+      }
+
+      competitors.forEach((c) => {
+        const chip = document.createElement("span");
+        chip.className =
+          "inline-flex items-center gap-2 bg-gray-800 border border-gray-700 text-gray-100 text-xs rounded-full pl-3 pr-2 py-1";
+        chip.textContent = `${c.competitorName} (${c.competitorCode})`;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className =
+          "text-gray-400 hover:text-rose-400 font-bold leading-none";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => removeCompetitor(c.id));
+
+        chip.appendChild(removeBtn);
+        competitorChips.appendChild(chip);
+      });
+
+      const headerIds = [
+        "#compareHeaderA",
+        "#compareHeaderB",
+        "#compareHeaderC",
+      ];
+      headerIds.forEach((id, i) => {
+        const el = document.querySelector(id);
+        if (el) el.textContent = competitors[i] ? competitors[i].competitorName : "-";
+      });
+    }
+
+    function loadCompetitors() {
+      fetch(`/rest_company_competitors/by-company/${encodeURIComponent(chartData.companyCode)}`)
+        .then((response) => response.json())
+        .then(renderCompetitorChips)
+        .catch(() => {
+          competitorChips.innerHTML =
+            '<span class="text-sm text-rose-400">競合企業の取得に失敗しました。</span>';
+        });
+    }
+
+    // 検索候補（全企業）は初回モーダル表示時に1回だけ取得してキャッシュする
+    function loadCompanyOptions() {
+      if (competitorOptionsLoaded) return;
+      fetch("/rest_company_competitors/companies")
+        .then((response) => response.json())
+        .then((companies) => {
+          competitorOptionsList.innerHTML = "";
+          competitorLabelToCode = {};
+          companies.forEach((c) => {
+            if (c.code === chartData.companyCode) return;
+            const label = `${c.name} (${c.code})`;
+            competitorLabelToCode[label] = c.code;
+            const option = document.createElement("option");
+            option.value = label;
+            competitorOptionsList.appendChild(option);
+          });
+          competitorOptionsLoaded = true;
+        });
+    }
+
+    function removeCompetitor(id) {
+      fetch(`/rest_company_competitors/delete/${id}`, { method: "DELETE" })
+        .then(() => loadCompetitors())
+        .catch(() => alert("競合の削除に失敗しました"));
+    }
+
+    openCompareModalBtn.addEventListener("click", () => {
+      const selfHeader = document.getElementById("compareHeaderSelf");
+      if (selfHeader) {
+        selfHeader.textContent = `${chartData.companyName} (${chartData.companyCode})`;
+      }
+      loadCompanyOptions();
+      loadCompetitors();
+      openModal();
+    });
+
+    const closeBtn = document.getElementById("closeCompareModal");
+    const cancelBtn = document.getElementById("cancelCompareModal");
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+    compareModal.addEventListener("click", (event) => {
+      if (event.target === compareModal) closeModal();
+    });
+
+    const addCompetitorBtn = document.getElementById("addCompetitorBtn");
+    if (addCompetitorBtn) {
+      addCompetitorBtn.addEventListener("click", () => {
+        const inputVal = competitorSearchInput.value.trim();
+        competitorAddError.classList.add("hidden");
+
+        const competitorCode = competitorLabelToCode[inputVal];
+        if (!competitorCode) {
+          competitorAddError.textContent = "候補一覧から企業を選択してください。";
+          competitorAddError.classList.remove("hidden");
+          return;
+        }
+
+        fetch("/rest_company_competitors/insert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            companyCode: chartData.companyCode,
+            competitorCompanyCode: competitorCode,
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.text().then((message) => {
+                throw new Error(message || "競合の登録に失敗しました");
+              });
+            }
+            competitorSearchInput.value = "";
+            loadCompetitors();
+          })
+          .catch((error) => {
+            competitorAddError.textContent = error.message;
+            competitorAddError.classList.remove("hidden");
+          });
+      });
+    }
+  }
+
+  // ===================================
   // 共通処理セクション
   // ===================================
 });
