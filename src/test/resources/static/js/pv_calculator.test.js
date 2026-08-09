@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import "../../main/resources/static/js/pv_calculator.js";
+import "../../../../main/resources/static/js/pv_calculator.js";
 
 describe("Spring Boot フロントエンドJSテスト", () => {
   let calculator;

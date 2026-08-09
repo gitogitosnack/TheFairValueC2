@@ -39,7 +39,11 @@
       "PowerShell(Stop-Process *)",
       "Bash(curl -s http://localhost:8080/stock-detail/1332)",
       "Bash(curl -s http://localhost:8080/stock-detail/4452 -o __TRACKED_VAR__/detail-4452-fallback.html)",
-      "Bash(grep -n 'シミュレーションパラメータ\\\\|理論株価評価モデルデータが登録されていません\\\\|lg:col-span-1' __TRACKED_VAR__/detail-4452-fallback.html)"
+      "Bash(grep -n 'シミュレーションパラメータ\\\\|理論株価評価モデルデータが登録されていません\\\\|lg:col-span-1' __TRACKED_VAR__/detail-4452-fallback.html)",
+      "Bash(npm install *)",
+      "Bash(git mv *)",
+      "Bash(rmdir src/test/javascript)",
+      "Bash(echo \"EXIT_CODE=$?\")"
     ]
   }
 }
