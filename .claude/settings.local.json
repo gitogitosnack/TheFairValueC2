@@ -43,7 +43,9 @@
       "Bash(npm install *)",
       "Bash(git mv *)",
       "Bash(rmdir src/test/javascript)",
-      "Bash(echo \"EXIT_CODE=$?\")"
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(where chromium-cli *)",
+      "Read(//c/Users/TA/AppData/Local/Temp/claude/bundled-skills/2.1.226/**)"
     ]
   }
 }
