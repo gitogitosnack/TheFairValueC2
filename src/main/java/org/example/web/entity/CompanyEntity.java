@@ -6,7 +6,6 @@ import org.seasar.doma.Table;
 import org.seasar.doma.Column;
 import org.seasar.doma.GeneratedValue;
 import org.seasar.doma.GenerationType;
-import java.math.BigDecimal;
 
 /**
  * 企業情報のエンティティ
@@ -40,15 +39,6 @@ public class CompanyEntity {
 
     @Column(name = "delete_flg")
     private Integer deleteFlg;
-
-    @Column(name = "current_price")
-    private Integer currentPrice;
-
-    @Column(name = "outstanding_shares")
-    private Long outstandingShares;
-
-    @Column(name = "market_cap")
-    private BigDecimal marketCap;
 
     // --- Getter and Setter ---
 
@@ -114,27 +104,5 @@ public class CompanyEntity {
 
     public void setDeleteFlg(Integer deleteFlg) {
         this.deleteFlg = deleteFlg;
-    }
-
-    public Integer getCurrentPrice() { return currentPrice; }
-
-    public void setCurrentPrice(Integer currentPrice) {
-        this.currentPrice = currentPrice;
-    }
-
-    public Long getOutstandingShares() {
-        return outstandingShares;
-    }
-
-    public void setOutstandingShares(Long outstandingShares) {
-        this.outstandingShares = outstandingShares;
-    }
-
-    public BigDecimal getMarketCap() {
-        return marketCap;
-    }
-
-    public void setMarketCap(BigDecimal marketCap) {
-        this.marketCap = marketCap;
     }
 }

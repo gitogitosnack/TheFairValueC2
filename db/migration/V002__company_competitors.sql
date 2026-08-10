@@ -25,13 +25,28 @@ CREATE TABLE IF NOT EXISTS company_competitors (
 -- 2. ダミーデータ
 -- ---------------------------------------------------------------------
 -- ダミー競合企業（コード・企業名だけでダミーとわかるようにしている）
+-- 現在株価・発行済株式数は companies ではなく daily_quotes 側で保持する
+-- （current_price は V003、outstanding_shares は V004 参照）ため、
+-- companies には market_cap を含め投入せず、下の daily_quotes INSERT でまとめて投入する。
 INSERT INTO companies
-  (code, name, country_id, industry_id, market_name, currency_id, delete_flg, current_price, outstanding_shares, market_cap)
+  (code, name, country_id, industry_id, market_name, currency_id, delete_flg)
 VALUES
-  ('DUMMY01', '【ダミー】競合商事A', 1, 1, 'ダミー市場', 1, 0, 1000, 1000000, 1000000000),
-  ('DUMMY02', '【ダミー】競合工業B', 1, 1, 'ダミー市場', 1, 0, 1500,  800000, 1200000000),
-  ('DUMMY03', '【ダミー】競合HD C', 1, 1, 'ダミー市場', 1, 0, 2000,  500000, 1000000000)
+  ('DUMMY01', '【ダミー】競合商事A', 1, 1, 'ダミー市場', 1, 0),
+  ('DUMMY02', '【ダミー】競合工業B', 1, 1, 'ダミー市場', 1, 0),
+  ('DUMMY03', '【ダミー】競合HD C', 1, 1, 'ダミー市場', 1, 0)
 ON CONFLICT (code) DO NOTHING;
+
+-- ダミー競合企業の現在株価・発行済株式数（daily_quotes 側に一本化。V003・V004 参照）
+INSERT INTO daily_quotes (company_id, date, close_price, shares_outstanding)
+SELECT c.id, CURRENT_DATE, v.close_price, v.shares_outstanding
+FROM companies c
+JOIN (VALUES
+    ('DUMMY01', 1000, 1000000),
+    ('DUMMY02', 1500,  800000),
+    ('DUMMY03', 2000,  500000)
+  ) AS v(code, close_price, shares_outstanding)
+  ON c.code = v.code
+ON CONFLICT (company_id, date) DO NOTHING;
 
 -- 花王(4452)に対してダミー競合3社を双方向で手動登録しておく
 INSERT INTO company_competitors (company_id, competitor_company_id)

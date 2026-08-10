@@ -4,11 +4,13 @@ import org.example.web.dao.AnalysisIndicatorDao;
 import org.example.web.dao.CompanyDao;
 import org.example.web.dao.CompanyValuationModelsDao;
 import org.example.web.dao.CompanyValuationParameterDefaultsDao;
+import org.example.web.dao.DailyQuoteDao;
 import org.example.web.dao.FinancialStatementDao;
 import org.example.web.dao.ValuationModelsDao;
 import org.example.web.dao.ValuationParametersDao;
 import org.example.web.entity.AnalysisIndicatorEntity;
 import org.example.web.entity.CompanyEntity;
+import org.example.web.entity.DailyQuoteEntity;
 import org.example.web.entity.CompanyValuationModelsEntity;
 import org.example.web.entity.CompanyValuationParameterDefaultsEntity;
 import org.example.web.entity.FinancialStatementEntity;
@@ -44,6 +46,8 @@ class StockDetailServiceImplTest {
     @Mock
     CompanyDao companyDao;
     @Mock
+    DailyQuoteDao dailyQuoteDao;
+    @Mock
     ValuationModelsDao valuationModelDao;
     @Mock
     AnalysisIndicatorDao analysisIndicatorDao;
@@ -63,6 +67,7 @@ class StockDetailServiceImplTest {
         service.ciMapper = ciMapper;
         service.financialStatementDao = financialStatementDao;
         service.companyDao = companyDao;
+        service.dailyQuoteDao = dailyQuoteDao;
         service.valuationModelDao = valuationModelDao;
         service.analysisIndicatorDao = analysisIndicatorDao;
         service.companyValuationParameterDefaultsDao = companyValuationParameterDefaultsDao;
@@ -75,8 +80,13 @@ class StockDetailServiceImplTest {
         entity.setId(100);
         entity.setCode("7203");
         entity.setName("トヨタ自動車");
-        entity.setCurrentPrice(2500);
-        entity.setOutstandingShares(1_000_000L);
+        return entity;
+    }
+
+    private DailyQuoteEntity dailyQuote(BigDecimal closePrice, Long sharesOutstanding) {
+        DailyQuoteEntity entity = new DailyQuoteEntity();
+        entity.setClosePrice(closePrice);
+        entity.setSharesOutstanding(sharesOutstanding);
         return entity;
     }
 
@@ -103,6 +113,8 @@ class StockDetailServiceImplTest {
     void getComprehensiveAnalysis_主要指標と財務データを組み立てること() {
         CompanyEntity companyEntity = company();
         stubCompanyFound(100, "7203", companyEntity);
+        when(dailyQuoteDao.selectLatestByCompanyId(100))
+                .thenReturn(Optional.of(dailyQuote(BigDecimal.valueOf(2500), 1_000_000L)));
 
         AnalysisIndicatorEntity indicator = latestIndicator();
         when(analysisIndicatorDao.selectByCompanyId(100, 10)).thenReturn(List.of(indicator));

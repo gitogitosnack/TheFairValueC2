@@ -7,8 +7,7 @@
 
 ## 1. 目的
 
-- `companies.current_price` / `outstanding_shares` / `market_cap` を最新の株価情報で自動更新する
-- `daily_quotes`（日次株価）を毎営業日積み上げる
+- `daily_quotes`（日次株価。現在株価・発行済株式数を含む）を毎営業日積み上げる
 - `financial_statements`（四半期決算）を決算発表のたびに取り込む
 - 上記により `StockDetailServiceImpl.getComprehensiveAnalysis()` が返す分析結果を、手動更新なしで
   常に最新の状態に保つ
@@ -17,11 +16,20 @@
 
 ### 対象データ（今回）
 
-| データ                             | 格納先テーブル                                  | 更新頻度                                             |
-| ---------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
-| 現在株価・出来高・時価総額         | `companies`（current_price 等）, `daily_quotes` | 日次（営業日）                                       |
-| 財務諸表（売上・利益・BS/CF 項目） | `financial_statements`                          | 四半期（決算発表都度、日本株は環境変数で頻度調整可） |
-| 分析指標（ROE・PER 等の派生値）    | `analysis_indicators`                           | 財務諸表更新に連動して再計算                         |
+| データ                             | 格納先テーブル                                                    | 更新頻度                                             |
+| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------- |
+| 現在株価・出来高・発行済株式数     | `daily_quotes`（close_price・shares_outstanding 等に一本化）      | 日次（営業日）                                       |
+| 財務諸表（売上・利益・BS/CF 項目） | `financial_statements`                                              | 四半期（決算発表都度、日本株は環境変数で頻度調整可） |
+| 分析指標（ROE・PER 等の派生値）    | `analysis_indicators`                                               | 財務諸表更新に連動して再計算                         |
+
+> **2026-08-11 反映**: `companies.current_price` / `outstanding_shares` / `market_cap` は廃止した。
+> 現在株価・発行済株式数は `daily_quotes` の最新日付（`(company_id, date)` UNIQUE）の行の
+> `close_price` / `shares_outstanding` を参照する方式に変更している
+> （`db/migration/V003__move_current_price_to_daily_quotes.sql`,
+> `V004__drop_companies_shares_and_market_cap.sql`）。`market_cap` はアプリケーションコードから
+> 未参照だったため移設せず削除した（時価総額が今後必要になった場合は `daily_quotes.market_cap` を使う）。
+> 本バッチが `daily_quotes` を毎営業日 UPSERT する設計自体は変わらないが、4.2 節の「companies 側の更新」の
+> ステップは不要になった。
 
 ### スコープ外（今回は対象外、将来検討）
 
@@ -200,18 +208,18 @@ python-services/
 ### 4.2 日次株価同期（`DailyQuoteSyncService`)
 
 > **注意**: EDINET は有価証券報告書等の開示書類 API であり、株価・出来高・時価総額といった
-> 相場データは一切提供していない。日本株の `daily_quotes` / `companies.current_price` は
+> 相場データは一切提供していない。日本株の `daily_quotes` は
 > Yahoo Finance（3.3 の yfinance-service 経由）から取得する。
 
 - **実行タイミング（案、環境変数化）**: 市場ごとに分離し、cron 式は環境変数で調整可能にする（6 章）
   - 日本株ジョブ（yfinance-service 経由）: 既定値は平日 JST 16:00（東証大引け後）
   - 米国株ジョブ（FMP）: 既定値は平日 JST 06:30（米国市場引け後、サマータイム考慮が必要）
 - **処理内容**（銘柄ごとに実施、1 件の失敗で全体を止めない）
-  1. `StockPriceProvider.fetchLatestQuote(code)` で当日の始値・高値・安値・終値・出来高・時価総額を取得
-     （日本株の場合、内部では yfinance-service への HTTP リクエストになる）
+  1. `StockPriceProvider.fetchLatestQuote(code)` で当日の始値・高値・安値・終値・出来高・時価総額・
+     発行済株式数を取得（日本株の場合、内部では yfinance-service への HTTP リクエストになる）
   2. `daily_quotes` に対して `(company_id, date)` で UPSERT
-  3. `companies.current_price` / `market_cap` / `outstanding_shares` を最新値で更新
-  4. 取得失敗（銘柄が API 側に存在しない、レート制限、yfinance-service 未起動・タイムアウト等）は
+     （現在株価・発行済株式数・時価総額はいずれもここに一本化。2026-08-11 反映。companies 側の更新は不要）
+  3. 取得失敗（銘柄が API 側に存在しない、レート制限、yfinance-service 未起動・タイムアウト等）は
      ログに記録し次の銘柄へ継続
 - **冪等性**: 同日に複数回実行されても `(company_id, date)` の UNIQUE 制約＋ UPSERT で安全に再実行できる
 - **実行経路**: 外部スケジューラ／内蔵スケジューラ／手動実行のいずれから起動されても本処理内容は共通。
@@ -374,7 +382,7 @@ sequenceDiagram
             DQS->>FMP: fetchLatestQuote(code)
             FMP-->>DQS: 株価データ or エラー
         end
-        DQS->>DB: daily_quotes UPSERT / companies UPDATE
+        DQS->>DB: daily_quotes UPSERT（現在株価・発行済株式数・時価総額はここに一本化。companies側の更新は不要）
         Note over DQS: 1 銘柄の失敗はログ記録のみで継続
     end
 ```

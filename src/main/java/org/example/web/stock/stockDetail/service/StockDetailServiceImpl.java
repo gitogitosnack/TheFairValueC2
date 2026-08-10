@@ -15,11 +15,13 @@ import org.example.web.dao.AnalysisIndicatorDaoImpl;
 import org.example.web.dao.CompanyDao;
 import org.example.web.dao.CompanyValuationModelsDao;
 import org.example.web.dao.CompanyValuationParameterDefaultsDao;
+import org.example.web.dao.DailyQuoteDao;
 import org.example.web.dao.FinancialStatementDao;
 import org.example.web.dao.ValuationModelsDao;
 import org.example.web.dao.ValuationParametersDao;
 import org.example.web.entity.AnalysisIndicatorEntity;
 import org.example.web.entity.CompanyEntity;
+import org.example.web.entity.DailyQuoteEntity;
 import org.example.web.entity.CompanyValuationModelsEntity;
 import org.example.web.entity.CompanyValuationParameterDefaultsEntity;
 import org.example.web.entity.FinancialStatementEntity;
@@ -69,6 +71,9 @@ public class StockDetailServiceImpl implements StockDetailService {
 
     @Autowired
     CompanyDao companyDao;
+
+    @Autowired
+    DailyQuoteDao dailyQuoteDao;
 
     @Autowired
     ValuationModelsDao valuationModelDao;
@@ -183,9 +188,17 @@ public class StockDetailServiceImpl implements StockDetailService {
             keyFinancialIndicatorDto.setCompanyCode(company.get().getCode());
             // Set the company name to dto
             keyFinancialIndicatorDto.setCompanyName(company.get().getName());
-            // Set the current price to dto
-            keyFinancialIndicatorDto.setCurrentPrice(company.get().getCurrentPrice());
+            // Set the current price to dto (daily_quotes の最新日付の終値)
+            BigDecimal currentPrice = this.getLatestDailyQuote(id).map(DailyQuoteEntity::getClosePrice).orElse(null);
+            keyFinancialIndicatorDto.setCurrentPrice(currentPrice != null ? currentPrice.intValue() : null);
         }
+    }
+
+    // 現在株価・発行済株式数として扱う値を daily_quotes の最新日付の行から取得する。
+    // companies.current_price / outstanding_shares は廃止し daily_quotes に一本化したため
+    // (db/migration/V003, V004)、これらを必要とする箇所は必ずこのメソッド経由で取得する。
+    private Optional<DailyQuoteEntity> getLatestDailyQuote(Integer companyId) {
+        return dailyQuoteDao.selectLatestByCompanyId(companyId);
     }
 
     // Get the parameters to display in the company detail page.
@@ -418,10 +431,10 @@ public class StockDetailServiceImpl implements StockDetailService {
         if (company.isEmpty()) {
             return;
         }
-        CompanyEntity companyEntity = company.get();
-        financialDataDto.setSharesOutstanding(companyEntity.getOutstandingShares());
-        financialDataDto.setCurrentPrice(
-                companyEntity.getCurrentPrice() != null ? companyEntity.getCurrentPrice().doubleValue() : null);
+        Optional<DailyQuoteEntity> dailyQuote = this.getLatestDailyQuote(id);
+        financialDataDto.setSharesOutstanding(dailyQuote.map(DailyQuoteEntity::getSharesOutstanding).orElse(null));
+        BigDecimal currentPrice = dailyQuote.map(DailyQuoteEntity::getClosePrice).orElse(null);
+        financialDataDto.setCurrentPrice(currentPrice != null ? currentPrice.doubleValue() : null);
 
         // financial_statements（最新通期）から企業規模を表す絶対額の項目を取得する。
         Optional<FinancialStatementEntity> statement = financialStatementDao.selectLatestAnnualByCompanyId(id);

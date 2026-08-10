@@ -45,7 +45,20 @@
       "Bash(rmdir src/test/javascript)",
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(where chromium-cli *)",
-      "Read(//c/Users/TA/AppData/Local/Temp/claude/bundled-skills/2.1.226/**)"
+      "Read(//c/Users/TA/AppData/Local/Temp/claude/bundled-skills/2.1.226/**)",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(*\\) AS companies_with_price FROM companies WHERE current_price IS NOT NULL AND delete_flg=0;\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(*\\) AS daily_quotes_rows FROM daily_quotes;\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(DISTINCT company_id\\) AS companies_with_quotes FROM daily_quotes;\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"\\\\d daily_quotes\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -f \"C:/Users/TA/java_projects/TheFairValueC2/db/migration/V003__move_current_price_to_daily_quotes.sql\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(*\\) AS daily_quotes_rows, count\\(DISTINCT company_id\\) AS distinct_companies FROM daily_quotes;\")",
+      "Bash(mvn -q test -Dtest=StockDetailServiceImplTest)",
+      "Bash(mvn -q test)",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT c.code, c.name, dq.date, dq.close_price FROM companies c JOIN daily_quotes dq ON dq.company_id = c.id WHERE c.code IN \\('1332','1333'\\);\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(*\\) AS total, count\\(*\\) FILTER \\(WHERE outstanding_shares IS NOT NULL AND outstanding_shares <> 0\\) AS with_shares, count\\(*\\) FILTER \\(WHERE market_cap IS NOT NULL AND market_cap <> 0\\) AS with_market_cap FROM companies WHERE delete_flg=0;\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT count\\(*\\) FROM companies c WHERE \\(c.outstanding_shares IS NOT NULL AND c.outstanding_shares<>0\\) AND NOT EXISTS \\(SELECT 1 FROM daily_quotes dq WHERE dq.company_id=c.id AND dq.date=CURRENT_DATE\\);\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -f \"C:/Users/TA/java_projects/TheFairValueC2/db/migration/V004__drop_companies_shares_and_market_cap.sql\")",
+      "Bash(psql -h localhost -U postgres -d db4thefairvalueC2 -c \"SELECT c.code, c.name, dq.date, dq.close_price, dq.shares_outstanding FROM companies c JOIN daily_quotes dq ON dq.company_id=c.id WHERE c.code IN \\('1332','1333'\\);\")"
     ]
   }
 }

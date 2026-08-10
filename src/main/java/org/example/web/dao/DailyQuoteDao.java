@@ -16,6 +16,15 @@ public interface DailyQuoteDao {
     @Select
     Optional<DailyQuoteEntity> selectById(Long id);
 
+    /**
+     * 指定企業の最新日付の日次株価（現在株価として扱う）を1件取得します。
+     *
+     * @param companyId 企業ID
+     * @return 最新日付の日次株価。存在しない場合は empty
+     */
+    @Select
+    Optional<DailyQuoteEntity> selectLatestByCompanyId(Integer companyId);
+
     @Insert
     int insert(DailyQuoteEntity entity);
 
