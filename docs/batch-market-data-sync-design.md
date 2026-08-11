@@ -16,20 +16,11 @@
 
 ### 対象データ（今回）
 
-| データ                             | 格納先テーブル                                                    | 更新頻度                                             |
-| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------- |
-| 現在株価・出来高・発行済株式数     | `daily_quotes`（close_price・shares_outstanding 等に一本化）      | 日次（営業日）                                       |
-| 財務諸表（売上・利益・BS/CF 項目） | `financial_statements`                                              | 四半期（決算発表都度、日本株は環境変数で頻度調整可） |
-| 分析指標（ROE・PER 等の派生値）    | `analysis_indicators`                                               | 財務諸表更新に連動して再計算                         |
-
-> **2026-08-11 反映**: `companies.current_price` / `outstanding_shares` / `market_cap` は廃止した。
-> 現在株価・発行済株式数は `daily_quotes` の最新日付（`(company_id, date)` UNIQUE）の行の
-> `close_price` / `shares_outstanding` を参照する方式に変更している
-> （`db/migration/V003__move_current_price_to_daily_quotes.sql`,
-> `V004__drop_companies_shares_and_market_cap.sql`）。`market_cap` はアプリケーションコードから
-> 未参照だったため移設せず削除した（時価総額が今後必要になった場合は `daily_quotes.market_cap` を使う）。
-> 本バッチが `daily_quotes` を毎営業日 UPSERT する設計自体は変わらないが、4.2 節の「companies 側の更新」の
-> ステップは不要になった。
+| データ                             | 格納先テーブル                                               | 更新頻度                                             |
+| ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
+| 現在株価・出来高・発行済株式数     | `daily_quotes`（close_price・shares_outstanding 等に一本化） | 日次（営業日）                                       |
+| 財務諸表（売上・利益・BS/CF 項目） | `financial_statements`                                       | 四半期（決算発表都度、日本株は環境変数で頻度調整可） |
+| 分析指標（ROE・PER 等の派生値）    | `analysis_indicators`                                        | 財務諸表更新に連動して再計算                         |
 
 ### スコープ外（今回は対象外、将来検討）
 
@@ -45,13 +36,17 @@
 
 ## 3. 全体アーキテクチャ
 
-### 3.1 起動方式の比較
+### 3.1 起動方式と処理エンジン
+
+「起動方式」（いつ・どのプロセスから呼び出すか）と「処理エンジン」（呼び出された後の処理をどう実装するか）は
+別軸の決定であり、分けて整理する。
+
+#### 起動方式の比較
 
 | 方式                                                                                      | 概要                                                                                   | 長所                                                                       | 短所                                                                             |
 | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | **Spring `@Scheduled`（常駐時のみ利用）**                                                 | アプリ常駐プロセス内で cron 式実行                                                     | 追加インフラ不要、既存 Spring 資産をそのまま再利用できる、実装がシンプル   | アプリを止めると実行されない。Windows タスクスケジューラ相当の外形監視が別途必要 |
 | **外部 cron / Windows タスクスケジューラ + `CommandLineRunner` バッチモード（基本方式）** | `--batch.mode=marketdata` のような引数でバッチ専用に起動し、外部スケジューラが定期実行 | アプリ本体と実行ライフサイクルを分離できる、失敗時の再実行が cron 側で完結 | 別プロセス起動のオーバーヘッド、Windows/本番環境でスケジューラの二重管理が必要   |
-| Spring Batch                                                                              | Step/Chunk/JobRepository によるジョブ管理フレームワーク                                | 再実行・スキップ・トランザクション制御が本格的                             | 現状の銘柄数・処理内容に対しては過剰。学習コストと依存追加が大きい               |
 
 **確定（11 章 回答 3・4）**: 外部スケジューラ起動と `@Scheduled` 常駐の**両方**を実装する。
 
@@ -67,7 +62,16 @@
   「外部スケジューラ起動」「内蔵スケジューラ起動」「手動実行」の 3 経路が同時に走らないよう
   排他制御が必須になる（3.4 参照）。
 
-Spring Batch は現時点でも過剰と判断し不採用のまま据え置く。
+#### 処理エンジンの選定（2026-08-11 反映）
+
+| バッチ                                                          | 処理エンジン                                          | 理由                                                                                                                                                                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 日次株価同期（当初 `DailyQuoteSyncService` が担う想定だった処理） | **Spring Batch**（Job/Step、chunk 指向）                | 学習目的で導入。銘柄をReaderで1件ずつ読みProcessorで変換しWriterでまとめて書く、というのが最もシンプルな適用対象であり、fault-tolerant機構（skip/retry、7章）や実行履歴の自動記録（8.1参照）の恩恵を得やすい |
+| 財務諸表同期（`FinancialStatementSyncService`）                   | 現行方針（Service クラス＋for ループ）を維持           | 米国株→日本株の逐次実行、EDINET側の「書類一覧を1回だけ取得してから自社銘柄と絞り込む」という非定型フロー（4.3.2）があり、chunk指向モデルに素直に載らない。日次株価同期での運用実績を踏まえ、将来的な移行は別途判断する（11章 未決事項） |
+
+以前の版では「Spring Batch は現状の銘柄数・処理内容に対しては過剰」として不採用としていたが、これは
+全バッチを一括でSpring Batch化する前提での判断だった。日次株価同期1本に限定して導入する分には過剰では
+ないと判断を改め、採用する。
 
 ### 3.2 パッケージ構成（既存の機能単位ルールに準拠）
 
@@ -89,9 +93,24 @@ src/main/java/org/example/web/batch/
 │   │   └── MarketDataSyncRestController.java    … 手動実行用 REST（3.4・4.4 参照）。
 │   │                                                `POST /rest_market_data_sync/quote`,
 │   │                                                `POST /rest_market_data_sync/financial-statement`
+│   ├── job/                                      … 日次株価同期（Spring Batch。2026-08-11 反映）
+│   │   └── DailyQuoteSyncJobConfig.java         … `dailyQuoteSyncJob` / `dailyQuoteSyncStep`
+│   │                                                （chunk指向）の Bean 定義。skip/retryの
+│   │                                                faultTolerant設定もここに持つ（7 章）
+│   ├── reader/
+│   │   └── CompanyItemReader.java               … `ItemReader<CompanyEntity>`。`companies` を
+│   │                                                `delete_flg = 0` で1件ずつ返す
+│   ├── processor/
+│   │   └── DailyQuoteItemProcessor.java         … `ItemProcessor<CompanyEntity, DailyQuoteEntity>`。
+│   │                                                `StockPriceProvider` 呼び出し＋変換。取得失敗は
+│   │                                                ログを残し `null` を返してそのアイテムを
+│   │                                                chunkから除外する（4.2 参照）
+│   ├── writer/
+│   │   └── DailyQuoteItemWriter.java            … `ItemWriter<DailyQuoteEntity>`。chunk単位で
+│   │                                                `daily_quotes` へ `(company_id, date)` で UPSERT
 │   ├── service/
-│   │   ├── DailyQuoteSyncService.java / Impl    … 日次株価同期
-│   │   ├── FinancialStatementSyncService.java / Impl … 四半期財務データ同期
+│   │   ├── FinancialStatementSyncService.java / Impl … 四半期財務データ同期（Spring Batch化は
+│   │   │                                                見送り、3.1 参照）
 │   │   ├── AnalysisIndicatorRecalcService.java / Impl … 財務データ更新後の指標再計算
 │   │   │                                                （算出ロジック本体は呼び出さず、既存の評価モデル機能側
 │   │   │                                                 のロジックを呼び出すだけのオーケストレーション役。11 章 回答 6）
@@ -113,13 +132,16 @@ src/main/java/org/example/web/batch/
 │       └── RestClientConfig.java                 … タイムアウト・リトライ込みの HTTP クライアント Bean
 ```
 
+- `pom.xml` に `spring-boot-starter-batch` を追加する。Spring Batchの `JobRepository` が使う標準
+  メタデータテーブル（`BATCH_JOB_INSTANCE` 等、8.1参照）をPostgreSQLに用意する必要がある。
 - `StockPriceProvider` / `FinancialDataProvider` はインタフェースとして分離し、銘柄の `country_id` /
   `currency_id` から実装を切り替える（プロバイダ振り分けは 4.1 参照）。これにより将来プロバイダを
-  差し替える・複数プロバイダを併用する場合も呼び出し側（Service）に影響を与えない。
+  差し替える・複数プロバイダを併用する場合も呼び出し側（Processor/Service）に影響を与えない。
 - 外部 API 呼び出し部分をインタフェースの背後に隠すことで、Java ユニットテストが存在しない現状の
   プロジェクトに対して、この機能から `StockPriceProvider` のモック実装を使ったテストを導入しやすくする。
 - `MarketDataBatchRunner`（外部スケジューラ起動）・`MarketDataSyncScheduler`（内蔵スケジューラ起動）・
-  `MarketDataSyncRestController`（手動起動）はいずれも `DailyQuoteSyncService` /
+  `MarketDataSyncRestController`（手動起動）は、日次株価同期については
+  `JobLauncher.run(dailyQuoteSyncJob, jobParameters)` を、財務諸表同期については
   `FinancialStatementSyncService` を呼び出すだけの薄いエントリポイントとし、
   実行前に `BatchExecutionLockService` でロック取得を試みる点だけ共通化する（3.4 参照）。
 
@@ -178,8 +200,10 @@ python-services/
   「他経路で実行中」としてログに記録し即座に終了する（手動実行の場合は画面へ
   「現在実行中のため開始できません」等のレスポンスを返す）
 - 処理完了時（成功/失敗どちらでも）に必ずロック解放する（`try-finally`）
-- ロック取得の成否・実行経路（`SCHEDULED_EXTERNAL` / `SCHEDULED_INTERNAL` / `MANUAL`）は
-  `batch_execution_logs.trigger_type` に記録する（8 章参照）
+- ロック取得の成否・実行経路（`SCHEDULED_EXTERNAL` / `SCHEDULED_INTERNAL` / `MANUAL`）の記録方法は
+  バッチ種別で異なる（2026-08-11 反映、8.1 参照）
+  - 日次株価同期: `JobParameters` の `triggerType` としてSpring Batchの `JobRepository`（`BATCH_JOB_EXECUTION_PARAMS`）に記録
+  - 財務諸表同期: 従来通り `batch_execution_logs.trigger_type` に記録
 
 ---
 
@@ -205,7 +229,11 @@ python-services/
    - ※ 実際の登録データ（`code` カラム）が本当にこの形式で統一されているかは、実装時に
      `companies` の実データで確認する
 
-### 4.2 日次株価同期（`DailyQuoteSyncService`)
+### 4.2 日次株価同期（`dailyQuoteSyncJob`、Spring Batch）
+
+> **2026-08-11 反映**: 日次株価同期は当初想定していた単一の `DailyQuoteSyncService` ではなく、
+> Spring BatchのJob/Step（chunk指向）として実装する（3.1 参照）。財務諸表同期（4.3）は
+> 引き続きplainな `FinancialStatementSyncService` のまま。
 
 > **注意**: EDINET は有価証券報告書等の開示書類 API であり、株価・出来高・時価総額といった
 > 相場データは一切提供していない。日本株の `daily_quotes` は
@@ -214,18 +242,35 @@ python-services/
 - **実行タイミング（案、環境変数化）**: 市場ごとに分離し、cron 式は環境変数で調整可能にする（6 章）
   - 日本株ジョブ（yfinance-service 経由）: 既定値は平日 JST 16:00（東証大引け後）
   - 米国株ジョブ（FMP）: 既定値は平日 JST 06:30（米国市場引け後、サマータイム考慮が必要）
-- **処理内容**（銘柄ごとに実施、1 件の失敗で全体を止めない）
-  1. `StockPriceProvider.fetchLatestQuote(code)` で当日の始値・高値・安値・終値・出来高・時価総額・
-     発行済株式数を取得（日本株の場合、内部では yfinance-service への HTTP リクエストになる）
-  2. `daily_quotes` に対して `(company_id, date)` で UPSERT
-     （現在株価・発行済株式数・時価総額はいずれもここに一本化。2026-08-11 反映。companies 側の更新は不要）
-  3. 取得失敗（銘柄が API 側に存在しない、レート制限、yfinance-service 未起動・タイムアウト等）は
-     ログに記録し次の銘柄へ継続
+- **Job/Step構成**（`dailyQuoteSyncJob` は単一の chunk指向 Step `dailyQuoteSyncStep` から成る）
+  1. `CompanyItemReader`（`ItemReader<CompanyEntity>`）が `delete_flg = 0` の企業を1件ずつ返す
+  2. `DailyQuoteItemProcessor`（`ItemProcessor<CompanyEntity, DailyQuoteEntity>`）が
+     `StockPriceProvider.fetchLatestQuote(code)` を呼び出し、当日の始値・高値・安値・終値・出来高・
+     時価総額・発行済株式数から `DailyQuoteEntity` を組み立てる（日本株の場合、内部では
+     yfinance-service への HTTP リクエストになる）。取得失敗（404・タイムアウト等）はここで
+     catchしてログに記録し `null` を返す — Spring Batchは「Processorが `null` を返したアイテムは
+     chunkから除外してwriteしない」という標準動作を持つため、「1件の失敗で全体を止めない」という
+     要件をこの仕組みでそのまま実現できる
+  3. `DailyQuoteItemWriter`（`ItemWriter<DailyQuoteEntity>`）がchunk単位で `daily_quotes` に対して
+     `(company_id, date)` で UPSERT する（現在株価・発行済株式数・時価総額はいずれもここに一本化。
+     companies 側の更新は不要）
+  4. 429（レート制限）等リトライで復帰し得るエラーは `DailyQuoteItemProcessor` から専用の
+     `RateLimitException` としてthrowし、`dailyQuoteSyncStep` の
+     `.faultTolerant().retry(RateLimitException.class).retryLimit(N)`（Spring Retryのbackoff policy
+     設定込み）で自動リトライする（手書きtry-catchではなく宣言的に記述できる。7 章参照）
+- **JobParameters**: `time`（起動時刻のtimestamp）と `triggerType`
+  （`SCHEDULED_EXTERNAL` / `SCHEDULED_INTERNAL` / `MANUAL`、8.1参照）を渡す。Spring Batchは
+  同一JobInstance（Job名＋パラメータの組）が既にCOMPLETED済みだと再実行を拒否するため、日次実行の
+  たびに一意な `time` を持たせて再実行を許可する
 - **冪等性**: 同日に複数回実行されても `(company_id, date)` の UNIQUE 制約＋ UPSERT で安全に再実行できる
-- **実行経路**: 外部スケジューラ／内蔵スケジューラ／手動実行のいずれから起動されても本処理内容は共通。
-  起動前の排他制御は 3.4 参照
+- **実行経路**: 外部スケジューラ／内蔵スケジューラ／手動実行のいずれから起動されても
+  `JobLauncher.run(dailyQuoteSyncJob, jobParameters)` を呼ぶ点は共通。起動前の排他制御は 3.4 参照
 
 ### 4.3 財務諸表同期（`FinancialStatementSyncService`)
+
+> **2026-08-11 反映**: 本セクションはSpring Batch化の対象外（3.1 参照）。米国株→日本株の逐次実行、
+> EDINET側の「書類一覧を1回だけ取得してから絞り込む」という非定型フローがあり、日次株価同期（4.2）
+> とは異なり従来通り `FinancialStatementSyncService` が担う。
 
 米国株（FMP）と日本株（EDINET）で取得モデルが根本的に異なるため、処理フローとしては分けて説明するが、
 **実行方式としては 1 回の `FinancialStatementSyncService` 呼び出しの中で両市場を逐次実行する**
@@ -311,10 +356,11 @@ EDINET には「銘柄コードを指定して財務データを取得する」�
 - **処理**:
   1. リクエストを受けたら `BatchExecutionLockService.tryLock(batchType)` でロック取得を試みる
   2. 取得できなければ「現在実行中です」等のレスポンス（例: HTTP 409）を返し、処理は行わない
-  3. 取得できれば `DailyQuoteSyncService` / `FinancialStatementSyncService` を呼び出し、
-     完了後（成功・失敗いずれも）ロックを解放する
-  4. 実行結果（成功件数・失敗件数）をレスポンスとして画面へ返し、`batch_execution_logs` にも
-     `trigger_type='MANUAL'` で記録する
+  3. 取得できれば、日次株価同期は `JobLauncher.run(dailyQuoteSyncJob, jobParameters)`（`triggerType=MANUAL`）、
+     財務諸表同期は `FinancialStatementSyncService` を呼び出し、完了後（成功・失敗いずれも）ロックを解放する
+  4. 実行結果（成功件数・失敗件数）をレスポンスとして画面へ返す。財務諸表同期は `batch_execution_logs`
+     にも `trigger_type='MANUAL'` で記録する（日次株価同期はSpring Batchの `JobParameters` 経由で
+     `JobRepository` に記録される。8.1 参照）
 
 ### 4.5 シナリオ別シーケンス図
 
@@ -334,7 +380,7 @@ sequenceDiagram
     participant Ctrl as MarketDataSyncRestController<br/>(常駐プロセス内)
     participant Lock as BatchExecutionLockService
     participant DB as PostgreSQL
-    participant Svc as DailyQuoteSyncService /<br/>FinancialStatementSyncService
+    participant Exec as JobLauncher(日次株価) /<br/>FinancialStatementSyncService(財務諸表)
 
     alt 外部スケジューラ起動
         ExtSch->>Runner: --batch.mode=marketdata で起動
@@ -349,11 +395,17 @@ sequenceDiagram
     Lock->>DB: pg_try_advisory_lock(lockKey)
     alt ロック取得成功
         DB-->>Lock: true
-        Lock-->>Svc: 実行許可
-        Svc->>DB: batch_execution_logs INSERT (status=RUNNING, trigger_type=...)
-        Note over Svc: 4.5.2（日次株価）または 4.5.3（財務諸表・米国株→日本株の順）へ
-        Svc->>DB: batch_execution_logs UPDATE (status=SUCCESS/FAILED)
-        Svc->>Lock: unlock(batchType)
+        Lock-->>Exec: 実行許可
+        alt 日次株価同期
+            Note over Exec: JobLauncher.run(dailyQuoteSyncJob, jobParameters)
+            Note over Exec: 実行履歴はSpring BatchのJobRepositoryが自動記録（8.1参照）
+            Note over Exec: 4.5.2 へ
+        else 財務諸表同期
+            Exec->>DB: batch_execution_logs INSERT (status=RUNNING, trigger_type=...)
+            Note over Exec: 4.5.3（米国株→日本株の順）へ
+            Exec->>DB: batch_execution_logs UPDATE (status=SUCCESS/FAILED)
+        end
+        Exec->>Lock: unlock(batchType)
         Lock->>DB: pg_advisory_unlock(lockKey)
     else ロック取得失敗（他経路が実行中）
         DB-->>Lock: false
@@ -364,27 +416,39 @@ sequenceDiagram
     end
 ```
 
-#### 4.5.2 日次株価同期（ロック取得後）
+#### 4.5.2 日次株価同期（ロック取得後、Spring Batch: `dailyQuoteSyncStep`）
 
 ```mermaid
 sequenceDiagram
-    participant DQS as DailyQuoteSyncService
+    participant Step as dailyQuoteSyncStep<br/>(chunk指向)
+    participant Reader as CompanyItemReader
+    participant Processor as DailyQuoteItemProcessor
+    participant Writer as DailyQuoteItemWriter
     participant DB as PostgreSQL
     participant Yfin as yfinance-service<br/>(Python, 日本株)
     participant FMP as FMP (米国株)
 
-    DQS->>DB: companies を delete_flg=0 で取得
-    loop 銘柄ごと
+    loop chunkサイズ分（企業単位で読み進める）
+        Step->>Reader: read()
+        Reader->>DB: companies を delete_flg=0 で1件取得
+        Reader-->>Step: CompanyEntity
+        Step->>Processor: process(CompanyEntity)
         alt 日本株
-            DQS->>Yfin: GET /quotes/{code}.T
-            Yfin-->>DQS: 株価データ or エラー
+            Processor->>Yfin: GET /quotes/{code}.T
+            Yfin-->>Processor: 株価データ or エラー
         else 米国株
-            DQS->>FMP: fetchLatestQuote(code)
-            FMP-->>DQS: 株価データ or エラー
+            Processor->>FMP: fetchLatestQuote(code)
+            FMP-->>Processor: 株価データ or エラー
         end
-        DQS->>DB: daily_quotes UPSERT（現在株価・発行済株式数・時価総額はここに一本化。companies側の更新は不要）
-        Note over DQS: 1 銘柄の失敗はログ記録のみで継続
+        alt 取得成功
+            Processor-->>Step: DailyQuoteEntity
+        else 取得失敗（1銘柄分）
+            Note over Processor: ログ記録のみで継続
+            Processor-->>Step: null（chunkから除外）
+        end
     end
+    Step->>Writer: write(chunk内のDailyQuoteEntityリスト)
+    Writer->>DB: daily_quotes UPSERT（(company_id, date)。現在株価・発行済株式数・時価総額はここに一本化）
 ```
 
 #### 4.5.3 財務諸表同期（ロック取得後、米国株→日本株の順で逐次実行）
@@ -548,15 +612,27 @@ Python の `yfinance` ライブラリをそのまま使う独立マイクロサ�
 
 ## 7. エラーハンドリング・リトライ・レート制限
 
+> **2026-08-11 反映**: 日次株価同期（Spring Batch）と財務諸表同期（plainなService）で
+> 実現方法が分かれる（3.1 参照）。
+
 - **銘柄単位で例外を握りつぶす**: 1 銘柄の取得失敗（404・タイムアウト等）でバッチ全体を止めない。
-  失敗した銘柄コードと理由をログ（`batch_execution_logs` / `market_data_fetch_errors`、8 章）に記録し、
-  次回バッチで再取得を試みる
+  - 日次株価同期: `DailyQuoteItemProcessor` がcatchしてログに記録し `null` を返す。Spring Batchの
+    標準動作（`null` を返したアイテムはwriteされない）でそのまま実現できる（4.2 参照）
+  - 財務諸表同期: 引き続き手書きtry-catchで1銘柄の失敗を握りつぶし、次の銘柄へ継続する
+  - 失敗した銘柄コードと理由はログ（`market_data_fetch_errors`、財務諸表同期は
+    `batch_execution_logs` も、8 章）に記録し、次回バッチで再取得を試みる
 - **レート制限対応**: 無料プランは 1 分あたりのリクエスト数に上限があることが多いため、
-  銘柄ループ内に一定間隔のウェイトを入れる、または `Bucket4j` 等のレートリミッタ導入を検討
-- **429（Too Many Requests）時**: 指数バックオフでリトライ（最大 N 回）。上限超過時はその回のバッチを
-  打ち切り、次回スケジュールに委ねる
+  銘柄ループ内（財務諸表同期）またはProcessor内（日次株価同期）に一定間隔のウェイトを入れる、
+  または `Bucket4j` 等のレートリミッタ導入を検討
+- **429（Too Many Requests）時**:
+  - 日次株価同期: `DailyQuoteItemProcessor` から `RateLimitException` をthrowし、
+    `dailyQuoteSyncStep` の `.faultTolerant().retry(RateLimitException.class).retryLimit(N)`
+    （Spring Retryのbackoff policy設定込み）で自動リトライする
+  - 財務諸表同期: 引き続き手書きの指数バックオフでリトライ（最大 N 回）
+  - いずれも上限超過時はその回のバッチを打ち切り、次回スケジュールに委ねる
 - **yfinance-service 未起動・疎通不可時**: 個別銘柄のエラーではなくジョブ全体に影響するため、
-  バッチ冒頭でヘルスチェックし、不可であれば銘柄ループへ入らず早期に `FAILED` 記録する（5.3 参照）
+  Step開始前（`dailyQuoteSyncJob` の `JobExecutionListener` 等）でヘルスチェックし、不可であれば
+  Stepへ入らず早期にJobを失敗させる（5.3 参照）
 - **起動経路の排他制御**: 外部スケジューラ／内蔵スケジューラ／手動実行が同時に走らないよう
   `BatchExecutionLockService` でロックする（3.4 参照）。エラーハンドリングというより並行実行制御だが、
   ロック取得失敗も広義の「実行できなかった」ケースとしてログに残す
@@ -567,13 +643,28 @@ Python の `yfinance` ライブラリをそのまま使う独立マイクロサ�
 
 ## 8. 新規 DB テーブル案
 
-### 8.1 `batch_execution_logs`（バッチ実行履歴）
+### 8.1 実行履歴（2026-08-11 反映：日次株価同期と財務諸表同期で方式が分かれる）
+
+日次株価同期をSpring Batch化したことに伴い、実行履歴の記録方法を検討し、
+**「Spring BatchのJobRepositoryをそのまま使う」方式（選択肢a）を採用**した。
+
+- **日次株価同期（Spring Batch）**: 独自の実行履歴テーブルは持たない。Spring Batchが自動生成する
+  標準メタデータテーブル（`BATCH_JOB_INSTANCE` / `BATCH_JOB_EXECUTION` / `BATCH_JOB_EXECUTION_PARAMS` /
+  `BATCH_STEP_EXECUTION`）をそのまま実行履歴として利用する。
+  - 実行経路（`SCHEDULED_EXTERNAL` / `SCHEDULED_INTERNAL` / `MANUAL`）は `JobParameters` の
+    `triggerType` として渡し、`BATCH_JOB_EXECUTION_PARAMS` から参照する（4.2 参照）
+  - 成功/失敗件数は `BATCH_STEP_EXECUTION` の `READ_COUNT` / `WRITE_COUNT` / `SKIP_COUNT` 等から取得できる
+  - `spring-boot-starter-batch` 追加に伴い、この標準スキーマをDBへ用意する必要がある
+    （`spring-batch-core` 同梱の `schema-postgresql.sql` を `V005__spring_batch_schema.sql` として
+    手動適用するか、`spring.batch.jdbc.initialize-schema=always` で自動生成させるかは実装時に選ぶ）
+- **財務諸表同期（引き続きplainなService）**: Spring Batch化していないため、従来設計通り
+  `batch_execution_logs` テーブルで独自に管理する（3.1 参照）。
 
 ```sql
 CREATE TABLE batch_execution_logs (
   id             serial PRIMARY KEY,
-  batch_type     varchar(50)  NOT NULL,   -- 'DAILY_QUOTE' / 'FINANCIAL_STATEMENT'（米国株・日本株は
-                                            -- 同一 batch_type 内で逐次実行するため分けない。11 章 回答 10）
+  batch_type     varchar(50)  NOT NULL,   -- 'FINANCIAL_STATEMENT' 固定（日次株価同期はSpring Batchの
+                                            -- メタデータテーブルに記録するためここには書かない。上記参照）
   trigger_type   varchar(20)  NOT NULL,   -- 'SCHEDULED_EXTERNAL' / 'SCHEDULED_INTERNAL' / 'MANUAL'
   started_at     timestamp    NOT NULL,
   finished_at    timestamp,
@@ -588,24 +679,34 @@ CREATE TABLE batch_execution_logs (
 - `trigger_type` は 3.4 の起動経路（外部スケジューラ／内蔵スケジューラ／手動）を記録するために新規追加。
 - 排他制御自体は PostgreSQL のアドバイザリロック（`pg_try_advisory_lock`、3.4 参照）で行うため、
   このテーブル自体に一意制約による排他の役割は持たせない（あくまで実行履歴・監査ログ）。
-- `batch_type='FINANCIAL_STATEMENT'` の 1 行の中に米国株・日本株の両方の結果が混在する
-  （`target_count` / `success_count` / `failure_count` は日米合算値）。市場別の内訳が必要になった場合は
-  `market_data_fetch_errors`（8.2）側で銘柄の `country_id` から追える。
+- 米国株・日本株の両方の結果が1行に混在する（`target_count` / `success_count` / `failure_count` は
+  日米合算値、11 章 回答 10）。市場別の内訳が必要になった場合は `market_data_fetch_errors`（8.2）側で
+  銘柄の `country_id` から追える。
+- 将来的に財務諸表同期もSpring Batch化する場合は、このテーブル自体が不要になる可能性がある
+  （11 章 未決事項）。
 
 ### 8.2 `market_data_fetch_errors`（銘柄単位の取得失敗履歴、任意）
 
+日次株価同期・財務諸表同期の双方で使う共通テーブル。実行履歴の参照先が
+バッチ種別によってSpring Batchのメタデータテーブル／`batch_execution_logs`と異なるため（8.1参照）、
+`batch_execution_id` にはFK制約を付けずアプリ側で意味を持たせる。
+
 ```sql
 CREATE TABLE market_data_fetch_errors (
-  id                serial PRIMARY KEY,
-  batch_execution_id integer NOT NULL REFERENCES batch_execution_logs(id),
-  company_id        integer NOT NULL REFERENCES companies(id),
-  error_message     text,
-  occurred_at       timestamp NOT NULL DEFAULT now()
+  id                  serial PRIMARY KEY,
+  batch_type          varchar(50) NOT NULL,   -- 'DAILY_QUOTE' / 'FINANCIAL_STATEMENT'
+  batch_execution_id  bigint NOT NULL,        -- DAILY_QUOTE: BATCH_JOB_EXECUTION.JOB_EXECUTION_ID
+                                                -- FINANCIAL_STATEMENT: batch_execution_logs.id
+                                                -- （参照先テーブルが batch_type により異なるためFK制約は付けない）
+  company_id          integer NOT NULL REFERENCES companies(id),
+  error_message       text,
+  occurred_at         timestamp NOT NULL DEFAULT now()
 );
 ```
 
 既存の `db/migration/V00x__*.sql` 命名規則（Flyway 未導入・手動適用）に従い、
-`V003__batch_execution_logs.sql` のような形で追加する想定。
+Spring Batch標準スキーマを `V005`、本テーブルと `batch_execution_logs` を `V006` あたりで
+追加する想定（実装時に確定）。
 
 ---
 
@@ -613,14 +714,17 @@ CREATE TABLE market_data_fetch_errors (
 
 1. **Step 1**: `StockPriceProvider` / `FinancialDataProvider` インタフェースを定義し、1 プロバイダ・
    1 銘柄で手動起動できる状態にする（`@Scheduled` はまだ付けない、`CommandLineRunner` 等で動作確認）
-2. **Step 2**: 対象銘柄を全件ループする `DailyQuoteSyncService` を実装し、`daily_quotes` / `companies`
-   への UPSERT を実データで確認する（この時点では米国株 = FMP のみで検証し、日本株は Step 3 以降）
+2. **Step 2**: `spring-boot-starter-batch` 依存を追加しバッチメタデータスキーマを適用（8.1参照）した上で、
+   対象銘柄を全件処理する `dailyQuoteSyncJob`（`CompanyItemReader` / `DailyQuoteItemProcessor` /
+   `DailyQuoteItemWriter` によるchunk指向Step）を実装し、`daily_quotes` への UPSERT を実データで
+   確認する（この時点では米国株 = FMP のみで検証し、日本株は Step 3 以降）
 3. **Step 3**: `python-services/yfinance-service` を最小構成（`GET /quotes/{symbol}` のみ）で立ち上げ、
    `YahooFinanceStockPriceProviderImpl` から疎通確認する
-4. **Step 4**: `BatchExecutionLockService`（PostgreSQL アドバイザリロック）と
-   `batch_execution_logs`（`trigger_type` 含む）を実装し、`MarketDataBatchRunner` /
-   `MarketDataSyncScheduler` / `MarketDataSyncRestController` の 3 エントリポイントから
-   排他制御込みで `DailyQuoteSyncService` を呼べる状態にする
+4. **Step 4**: `BatchExecutionLockService`（PostgreSQL アドバイザリロック）を実装し、
+   `MarketDataBatchRunner` / `MarketDataSyncScheduler` / `MarketDataSyncRestController` の
+   3 エントリポイントから排他制御込みで `JobLauncher.run(dailyQuoteSyncJob, jobParameters)` を
+   呼べる状態にする（日次株価同期の実行履歴はSpring BatchのJobRepositoryに記録されるため、
+   `batch_execution_logs` は財務諸表同期専用としてStep6以降で実装する。8.1参照）
 5. **Step 5**: 設定画面（新規追加）に「財務データ更新」セクションと全銘柄一括の
    「最新財務データ取得」ボタンを設置し、`MarketDataSyncRestController` と接続する（4.4 参照）
 6. **Step 6**: `FinancialStatementSyncService` の前半（米国株・FMP）を実装し、
@@ -642,10 +746,15 @@ CREATE TABLE market_data_fetch_errors (
 - `StockPriceProvider` / `FinancialDataProvider` をインタフェース化してあるため、外部 API 呼び出し部分は
   モック実装（または WireMock 等によるスタブサーバ）に差し替えてテスト可能にする。
   yfinance-service も HTTP 経由の呼び出しに閉じているため同様にスタブ可能
+- **日次株価同期（Spring Batch、2026-08-11 反映）**: `spring-batch-test` の `JobLauncherTestUtils` /
+  `StepScopeTestExecutionListener` を使い、`dailyQuoteSyncStep`（Reader/Processor/Writerの組み合わせ）や
+  `dailyQuoteSyncJob` 全体をテスト用DBに対して起動して検証する。`DailyQuoteItemProcessor` は
+  `StockPriceProvider` をモック化した上での単体テストも書く
 - 重点的にテストすべき箇所
-  - UPSERT ロジック（同日再実行時に重複行が増えないこと）
-  - 四半期の新旧比較ロジック（既に取り込み済みの四半期を再取得しないこと）
-  - 1 銘柄の失敗が他銘柄の処理を止めないこと
+  - UPSERT ロジック（同日再実行時に重複行が増えないこと） — `DailyQuoteItemWriter` / 財務諸表同期の双方
+  - 四半期の新旧比較ロジック（既に取り込み済みの四半期を再取得しないこと） — 財務諸表同期
+  - 1 銘柄の失敗が他銘柄の処理を止めないこと — 日次株価同期は `DailyQuoteItemProcessor` が `null` を
+    返すケースの単体テストで、財務諸表同期は従来通りループのテストで検証
   - **排他制御**: 同一バッチ種別に対して 2 経路から同時に `tryLock` した場合、片方のみが成功すること
     （テスト用 DB でのアドバイザリロック動作確認、または `BatchExecutionLockService` のモック化）
   - 手動実行 API がロック取得失敗時に 409 相当を返すこと
@@ -684,3 +793,12 @@ CREATE TABLE market_data_fetch_errors (
 ~~12（yfinance-service の起動方法）~~ → 2026-08-10 に回答済み。**確定**: 本アプリ自体が
 `mvn spring-boot:run` の手動常駐運用（CLAUDE.md）であることに合わせ、当面は手動起動を基本とする。
 より厳密な運用が必要になった場合に改めて検討する（3.3 参照）
+
+~~13（処理エンジンとしてのSpring Batch採用）~~ → 2026-08-11 に回答済み。**確定**: 日次株価同期
+（当初 `DailyQuoteSyncService` が担う想定だった処理）はSpring BatchのJob/Step（chunk指向）で
+実装する。学習目的も兼ね、まずは対象を日次株価同期に限定する。財務諸表同期
+（`FinancialStatementSyncService`）は米国株→日本株の逐次実行やEDINETの「書類一覧を1回だけ取得して
+から絞り込む」非定型フローがあり、今回はSpring Batch化せず現行方針を維持する（3.1 参照）。
+将来的に財務諸表同期もSpring Batch化するかは別途判断する（未決）。
+実行履歴は「Spring BatchのJobRepositoryをそのまま使う」方式（選択肢a）を採用し、日次株価同期専用の
+実行履歴テーブルは新設しない（8.1 参照）。財務諸表同期は引き続き `batch_execution_logs` で管理する。
