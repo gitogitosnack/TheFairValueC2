@@ -54,3 +54,6 @@ yarn-error.log*
 # OSが生成する一時ファイル（Windows/Mac）
 .DS_Store
 Thumbs.db
+
+__pycache__/
+*.pyc

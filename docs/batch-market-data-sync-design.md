@@ -62,6 +62,95 @@
   「外部スケジューラ起動」「内蔵スケジューラ起動」「手動実行」の 3 経路が同時に走らないよう
   排他制御が必須になる（3.4 参照）。
 
+#### 起動プロセスの分離（Web JAR / バッチ JAR、将来対応。2026-08-23 追記）
+
+上記の「基本運用」を、次の 3 つの利用シナリオに当てはめて検証した結果、**同一メインクラス
+（`org.example.TheFairValue`）の引数分岐だけでは実現できない**ことが判明した。
+
+1. Web アプリ起動中に画面の手動実行ボタンから更新し、同じ `JobLauncher` を使い、
+   処理後も Web アプリは起動したままにする → **対応可能**（同一プロセス内の REST 呼び出しのため）
+2. Web アプリ起動中に外部スケジューラが定期実行し、処理後も Web アプリは起動したままにする →
+   **NG**: 外部スケジューラが起動する別プロセスも、通常起動と同じく組み込み Tomcat を
+   同じポートで起動しようとするため、稼働中の Web アプリとポートが競合しクラッシュする
+3. Web アプリ停止中に外部スケジューラが定期実行し、処理後も Web アプリは停止したままにする →
+   **NG**: 組み込み Tomcat の非デーモンスレッドが JVM を生かし続けるため、`CommandLineRunner` の
+   処理が終わってもプロセスが自動終了せず、意図せず Web サーバとして起動し続けてしまう
+
+原因は、Web アプリ用とバッチ用の起動プロセスが同一メインクラス・同一 JVM 構成
+（`WebApplicationType.SERVLET` 固定）を共有している点にある。**将来対応**として、メインクラスを
+Web アプリ用とバッチ専用の 2 つに分離し、Maven で実行可能 JAR を 2 つ出力する方式へ移行する
+（現時点ではコード未着手・設計のみ。開発環境では引き続き `mvn spring-boot:run` の単一プロセス
+運用を継続し、CLAUDE.md の記載もこのままでよい）。
+
+- **バッチ専用メインクラス**: 既存の `org.example.TheFairValue`（Web 用）と同格に、
+  `org.example.MarketDataBatchApplication` を新設する（`web.batch` 配下ではなく `TheFairValue` と
+  同じ `org.example` 直下に置く）。`SpringApplicationBuilder` で明示的に非 Web 起動にし、
+  ジョブ完了後に `System.exit(SpringApplication.exit(context))` で確実にプロセスを終了させる。
+  これによりシナリオ 2（ポート競合）・シナリオ 3（プロセスが終了しない）を解消する。
+
+  ```java
+  @SpringBootApplication
+  public class MarketDataBatchApplication {
+      public static void main(String[] args) {
+          ConfigurableApplicationContext ctx =
+                  new SpringApplicationBuilder(MarketDataBatchApplication.class)
+                          .web(WebApplicationType.NONE)   // 組み込みTomcatを起動しない
+                          .run(args);
+          System.exit(SpringApplication.exit(ctx));       // 処理後に確実にプロセスを終了させる
+      }
+  }
+  ```
+
+- **`pom.xml`**: multi-module 化はせず、`spring-boot-maven-plugin` の `repackage` ゴールを
+  `classifier` 違いで 2 回実行し、同一クラスパスから実行可能 JAR を 2 つ出力する
+  （`TheFairValue-<version>-web.jar` / `TheFairValue-<version>-batch.jar`）。
+
+  ```xml
+  <plugin>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-maven-plugin</artifactId>
+      <executions>
+          <execution>
+              <id>repackage-web</id>
+              <goals><goal>repackage</goal></goals>
+              <configuration>
+                  <classifier>web</classifier>
+                  <mainClass>org.example.TheFairValue</mainClass>
+              </configuration>
+          </execution>
+          <execution>
+              <id>repackage-batch</id>
+              <goals><goal>repackage</goal></goals>
+              <configuration>
+                  <classifier>batch</classifier>
+                  <mainClass>org.example.MarketDataBatchApplication</mainClass>
+              </configuration>
+          </execution>
+      </executions>
+  </plugin>
+  ```
+
+  2 つの JAR はどちらも同一の `target/classes`（画面用 Controller・バッチ関連クラス双方）を含む
+  「fat jar」であり、違いはマニフェストの `Main-Class` とクラシファイアのみである。クラス自体を
+  物理的に分離したい場合は multi-module 化が必要になるが、今回はスコープ外とする。
+
+- **`--batch.mode=marketdata` 引数の意味変更**: メインクラスが分離されるため、「Web モードか
+  バッチモードか」を引数で判定する必要がなくなる。その代わり、`MarketDataBatchRunner`
+  （バッチ JAR の唯一のエントリポイント）が `--job=dailyQuote` / `--job=financialStatement` の
+  ような引数でどちらの `JobLauncher.run(job, jobParameters)` を呼ぶかを判定する形に変わる
+  （3.2 パッケージ構成参照）。外部スケジューラ（Windows タスクスケジューラ）は
+  `java -jar TheFairValue-<version>-batch.jar --job=dailyQuote` のように Job 単位でタスク登録する
+  運用になる。
+- **コンポーネントスキャン境界**: `MarketDataSyncScheduler`（内蔵 `@Scheduled`）・
+  `MarketDataSyncRestController`（手動実行 REST）がバッチ JAR のコンテキストに載っても実害はない
+  （`MARKETDATA_SCHEDULER_ENABLED` は既定 OFF、REST も `WebApplicationType.NONE` のため
+  DispatcherServlet 自体が存在せず待ち受けできない。かつプロセスはジョブ完了後すぐ終了する）が、
+  無駄な Bean 生成を避けたい場合は `MarketDataBatchApplication` 側で `scanBasePackages` を
+  `web.batch` / `web.dao` / `web.entity` / `web.stock.valuationmodel`（`AnalysisIndicatorRecalcService`
+  が呼び出す指標算出ロジック、4.3.3 参照）に絞る。
+- 開発環境から本番相当の 2 JAR 運用へ移行する実装時期は 9 章の実装ステップとは別軸の課題とし、
+  着手タイミングはユーザー判断で決定する。
+
 #### 処理エンジンの選定（2026-08-11 反映、同日中に再改訂）
 
 | バッチ                                                                    | 処理エンジン                                         | 理由                                                                                                                                                                                                                                                                                                               |
@@ -77,14 +166,18 @@
 
 `dao` / `entity` は既存ルール通り `web.dao` / `web.entity` 直下に残し、新規テーブルが必要な場合のみ追加する。
 バッチ固有のロジックは新規 `web.batch` 配下にまとめる（画面系の `web.stock.<feature>` とは独立させる）。
+将来対応のバッチ専用メインクラス `org.example.MarketDataBatchApplication`（3.1「起動プロセスの分離」参照）は
+`web.batch` 配下ではなく、既存の `org.example.TheFairValue` と同格の `org.example` 直下に置く。
 
 ```
 src/main/java/org/example/web/batch/
 ├── marketdata/
 │   ├── runner/
-│   │   └── MarketDataBatchRunner.java           … 外部スケジューラ用エントリポイント。
-│   │                                                `CommandLineRunner` + `--batch.mode=marketdata`
-│   │                                                引数判定で起動し、処理後にプロセス終了する
+│   │   └── MarketDataBatchRunner.java           … 外部スケジューラ用エントリポイント（`CommandLineRunner`）。
+│   │                                                将来はバッチ専用メインクラス
+│   │                                                `org.example.MarketDataBatchApplication`（3.1 参照）
+│   │                                                から起動され、`--job=dailyQuote` /
+│   │                                                `--job=financialStatement` 引数で対象Jobを判定する
 │   ├── scheduler/
 │   │   └── MarketDataSyncScheduler.java         … 内蔵 @Scheduled エントリポイント（cron は環境変数）。
 │   │                                                `MARKETDATA_SCHEDULER_ENABLED=true` の時のみ Bean 登録
@@ -205,8 +298,10 @@ python-services/
 11 章 回答 2・3・4 により、同じバッチ処理（日次株価同期・財務諸表同期）が次の 3 つの経路から
 起動され得る設計になる。
 
-1. **外部スケジューラ起動**: Windows タスクスケジューラ等が `--batch.mode=marketdata` でアプリを
-   都度起動し、`MarketDataBatchRunner` が実行後にプロセスを終了する（別プロセス）
+1. **外部スケジューラ起動**: Windows タスクスケジューラ等がバッチ専用 JAR
+   （`org.example.MarketDataBatchApplication`、3.1「起動プロセスの分離」参照）を `--job=dailyQuote` /
+   `--job=financialStatement` 引数付きで都度起動し、`MarketDataBatchRunner` が実行後にプロセスを
+   終了する（Web アプリとは別プロセス・別 JAR。組み込み Web サーバは起動しないためポート競合しない）
 2. **内蔵スケジューラ起動**: 常駐 Web サーバプロセス内の `MarketDataSyncScheduler`（`@Scheduled`）が
    環境変数で有効化されている場合に定期実行する（Web サーバと同一プロセス）
 3. **手動実行**: 画面の「最新財務データ取得」ボタンから `MarketDataSyncRestController` を叩いて
@@ -415,7 +510,7 @@ FMP のように「銘柄ループの中で 1 件ずつ API を呼ぶ」通常�
 ```mermaid
 sequenceDiagram
     participant ExtSch as 外部スケジューラ<br/>(Windowsタスク)
-    participant Runner as MarketDataBatchRunner<br/>(別プロセス)
+    participant Runner as MarketDataBatchRunner<br/>(バッチ専用JAR, 別プロセス)
     participant IntSch as MarketDataSyncScheduler<br/>(@Scheduled, 常駐プロセス内)
     participant User as ユーザー(画面)
     participant Ctrl as MarketDataSyncRestController<br/>(常駐プロセス内)
@@ -424,7 +519,7 @@ sequenceDiagram
     participant Launcher as JobLauncher<br/>(dailyQuoteSyncJob /<br/>financialStatementSyncJob)
 
     alt 外部スケジューラ起動
-        ExtSch->>Runner: --batch.mode=marketdata で起動
+        ExtSch->>Runner: --job=dailyQuote 等の引数でバッチ専用JARを起動
         Runner->>Lock: tryLock(batchType)
     else 内蔵スケジューラ起動（環境変数で有効時のみ存在）
         IntSch->>Lock: tryLock(batchType)
