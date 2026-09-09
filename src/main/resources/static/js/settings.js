@@ -47,6 +47,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===================================
+  // 財務データ更新（銘柄データ定期取得バッチ・全銘柄一括の手動実行ボタン）
+  // POST /rest_market_data_sync/quote, /rest_market_data_sync/financial-statement
+  // ===================================
+  const marketDataSyncButtons = [
+    { role: "sync-quote", url: "/rest_market_data_sync/quote" },
+    { role: "sync-financial-statement", url: "/rest_market_data_sync/financial-statement" },
+  ];
+
+  marketDataSyncButtons.forEach(({ role, url }) => {
+    const button = document.querySelector(`[data-role='${role}']`);
+    const status = document.querySelector(`[data-role='${role}-status']`);
+    if (!button || !status) return;
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      status.className = "marketdata-sync-status";
+      status.textContent = "実行中...";
+
+      try {
+        const response = await fetch(url, { method: "POST" });
+        const body = await response.json().catch(() => ({}));
+
+        if (response.status === 409) {
+          status.className = "marketdata-sync-status error";
+          status.textContent = body.message || "現在実行中のため開始できません";
+        } else if (!response.ok) {
+          status.className = "marketdata-sync-status error";
+          status.textContent = body.message || "実行に失敗しました";
+        } else {
+          status.className = "marketdata-sync-status success";
+          const counts = `読込${body.readCount ?? 0}件 / 更新${body.writeCount ?? 0}件`;
+          status.textContent = `${body.message || "実行が完了しました"}（${counts}）`;
+        }
+      } catch (e) {
+        status.className = "marketdata-sync-status error";
+        status.textContent = "通信に失敗しました";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
+  // ===================================
   // ログアウト（認証機能が未実装のため、銘柄一覧へ戻すだけのモック動作）
   // ===================================
   const logoutButton = document.getElementById("btn-logout-settings");

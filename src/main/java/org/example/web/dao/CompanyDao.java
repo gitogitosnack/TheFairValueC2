@@ -22,6 +22,19 @@ public interface CompanyDao {
     @Select
     Optional<CompanyEntity> selectById(int id);
 
+    /**
+     * delete_flg = 0 の企業を全件取得します（銘柄データ定期取得バッチ・日次株価同期用）。
+     */
+    @Select
+    List<CompanyEntity> selectAllActive();
+
+    /**
+     * 指定した国コード（countries.code、例 "US" / "JP"）に属する delete_flg = 0 の企業を取得します
+     * （銘柄データ定期取得バッチ・財務諸表同期の市場別絞り込み用）。
+     */
+    @Select
+    List<CompanyEntity> selectActiveByCountryCode(String countryCode);
+
     @Insert
     int insert(CompanyEntity code);
 

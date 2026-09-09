@@ -4,6 +4,7 @@ import org.example.web.entity.DailyQuoteEntity;
 import org.seasar.doma.*;
 import org.seasar.doma.boot.ConfigAutowireable;
 import org.seasar.doma.jdbc.Result;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,14 @@ public interface DailyQuoteDao {
      */
     @Select
     Optional<DailyQuoteEntity> selectLatestByCompanyId(Integer companyId);
+
+    /**
+     * (company_id, date) の UNIQUE 制約に対応する 1 件を取得します。
+     * 存在すれば UPDATE、存在しなければ INSERT する UPSERT ロジックに使う
+     * （DailyQuoteItemWriter、設計書 4.2 参照）。
+     */
+    @Select
+    Optional<DailyQuoteEntity> selectByCompanyIdAndDate(Integer companyId, LocalDate date);
 
     @Insert
     int insert(DailyQuoteEntity entity);

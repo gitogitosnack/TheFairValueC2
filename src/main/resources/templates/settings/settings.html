@@ -217,6 +217,38 @@
                 </div>
             </section>
 
+            <!-- ================= 財務データ更新 ================= -->
+            <section class="list-section settings-section">
+                <div class="list-header">
+                    <h2><i class="fa-solid fa-rotate"></i>財務データ更新</h2>
+                </div>
+                <p class="settings-section-desc">
+                    登録済み全銘柄の株価・財務諸表を外部APIから即時取得し、DBを更新します（銘柄単位の個別実行はできません）。
+                </p>
+
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">日次株価の更新</div>
+                        <div class="toggle-desc">全銘柄の株価・出来高・時価総額・発行済株式数を取得します</div>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-role="sync-quote">
+                        <i class="fa-solid fa-chart-line"></i>今すぐ更新
+                    </button>
+                </div>
+                <div class="marketdata-sync-status" data-role="sync-quote-status"></div>
+
+                <div class="toggle-row">
+                    <div class="toggle-row-text">
+                        <div class="toggle-title">財務諸表の更新</div>
+                        <div class="toggle-desc">全銘柄の財務諸表（米国株→日本株の順）を取得し、分析指標も再計算します</div>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-role="sync-financial-statement">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>今すぐ更新
+                    </button>
+                </div>
+                <div class="marketdata-sync-status" data-role="sync-financial-statement-status"></div>
+            </section>
+
         </div>
 
         <!-- ================= ログアウト（危険操作エリア） ================= -->
