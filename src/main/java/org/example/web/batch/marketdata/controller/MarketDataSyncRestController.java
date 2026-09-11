@@ -15,6 +15,7 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,7 +56,7 @@ public class MarketDataSyncRestController {
         return runJob(BatchType.FINANCIAL_STATEMENT, financialStatementSyncJob);
     }
 
-    private ResponseEntity<Map<String, Object>> runJob(BatchType batchType, Job job) {
+    private ResponseEntity<Map<String, Object>> runJob(BatchType batchType, @NonNull Job job) {
         if (!lockService.tryLock(batchType)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "現在実行中のため開始できません"));
