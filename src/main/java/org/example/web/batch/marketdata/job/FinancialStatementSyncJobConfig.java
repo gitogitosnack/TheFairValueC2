@@ -4,8 +4,10 @@ package org.example.web.batch.marketdata.job;
 import org.example.web.batch.marketdata.client.RateLimitException;
 import org.example.web.batch.marketdata.client.dto.EdinetMatchedDocument;
 import org.example.web.batch.marketdata.processor.JpFinancialStatementItemProcessor;
+import org.example.web.batch.marketdata.processor.PhFinancialStatementItemProcessor;
 import org.example.web.batch.marketdata.processor.UsFinancialStatementItemProcessor;
 import org.example.web.batch.marketdata.reader.EdinetMatchedDocumentItemReader;
+import org.example.web.batch.marketdata.reader.PhCompanyItemReader;
 import org.example.web.batch.marketdata.reader.UsCompanyItemReader;
 import org.example.web.batch.marketdata.tasklet.EdinetDocumentListTasklet;
 import org.example.web.batch.marketdata.writer.FinancialStatementItemWriter;
@@ -50,13 +52,15 @@ public class FinancialStatementSyncJobConfig {
                         JobRepository jobRepository,
                         Step usFinancialStatementStep,
                         Step edinetDocumentListStep,
-                        Step jpFinancialStatementStep) {
+                        Step jpFinancialStatementStep,
+                        Step phFinancialStatementStep) {
 
                 // JobBuilder を使用して Job を構築
                 return new JobBuilder("financialStatementSyncJob", jobRepository)
                                 .start(usFinancialStatementStep) // ① 最初に米国株の財務諸表取得を実行
                                 .next(edinetDocumentListStep) // ② 完了後、EDINET書類リストの取得Taskletを実行
                                 .next(jpFinancialStatementStep) // ③ 完了後、日本株の財務諸表取得を実行
+                                .next(phFinancialStatementStep) // ④ 完了後、フィリピン株の財務諸表取得を実行（現状はモック時のみ実データあり）
                                 .build(); // ジョブインスタンスの生成
         }
 
@@ -150,6 +154,30 @@ public class FinancialStatementSyncJobConfig {
                                 .retry(RateLimitException.class)
                                 .retryLimit(RETRY_LIMIT)
                                 .backOffPolicy(DailyQuoteSyncJobConfig.rateLimitBackOffPolicy())
+                                .build();
+        }
+
+        /**
+         * @Bean:
+         *        ④ フィリピン株財務諸表取得 Step（Chunk方式）
+         *
+         *        フィリピン株向けの実データ取得元（FinancialDataProvider実装）は現状存在しないため、
+         *        PhFinancialStatementItemProcessor はモックモード（marketdata.api.mock-enabled=true）の
+         *        ときのみ書き込み対象を返し、それ以外は常にスキップする。
+         */
+        @Bean
+        public Step phFinancialStatementStep(
+                        JobRepository jobRepository,
+                        PlatformTransactionManager transactionManager,
+                        PhCompanyItemReader phCompanyItemReader,
+                        PhFinancialStatementItemProcessor phFinancialStatementItemProcessor,
+                        FinancialStatementItemWriter financialStatementItemWriter) {
+
+                return new StepBuilder("phFinancialStatementStep", jobRepository)
+                                .<CompanyEntity, FinancialStatementEntity>chunk(CHUNK_SIZE, transactionManager)
+                                .reader(phCompanyItemReader)
+                                .processor(phFinancialStatementItemProcessor)
+                                .writer(financialStatementItemWriter)
                                 .build();
         }
 }

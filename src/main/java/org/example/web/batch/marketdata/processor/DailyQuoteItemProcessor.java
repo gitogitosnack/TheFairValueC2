@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.example.web.batch.marketdata.client.RateLimitException;
 import org.example.web.batch.marketdata.client.StockPriceProvider;
 import org.example.web.batch.marketdata.client.dto.StockQuoteData;
+import org.example.web.batch.marketdata.config.MarketDataApiProperties;
 import org.example.web.dao.CountryDao;
 import org.example.web.entity.CompanyEntity;
 import org.example.web.entity.CountryEntity;
@@ -30,17 +31,28 @@ public class DailyQuoteItemProcessor implements ItemProcessor<CompanyEntity, Dai
             "US", "fmpStockPriceProvider",
             "JP", "yahooFinanceStockPriceProvider");
 
+    private static final String MOCK_PROVIDER_BEAN = "mockStockPriceProvider";
+
     private final CountryDao countryDao;
     private final Map<String, StockPriceProvider> stockPriceProviders;
+    private final MarketDataApiProperties apiProperties;
 
-    public DailyQuoteItemProcessor(CountryDao countryDao, Map<String, StockPriceProvider> stockPriceProviders) {
+    public DailyQuoteItemProcessor(
+            CountryDao countryDao,
+            Map<String, StockPriceProvider> stockPriceProviders,
+            MarketDataApiProperties apiProperties) {
         this.countryDao = countryDao;
         this.stockPriceProviders = stockPriceProviders;
+        this.apiProperties = apiProperties;
     }
 
     @Override
     public DailyQuoteEntity process(CompanyEntity company) {
-        StockPriceProvider provider = resolveProvider(company);
+        // モックモードでは国コードによる振り分けを行わず、全銘柄をモックProviderへルーティングする
+        // （サンプル未登録の銘柄コードは MockStockPriceProviderImpl 側で null を返す）。
+        StockPriceProvider provider = apiProperties.isMockEnabled()
+                ? stockPriceProviders.get(MOCK_PROVIDER_BEAN)
+                : resolveProvider(company);
         if (provider == null) {
             return null;
         }

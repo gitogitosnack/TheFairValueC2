@@ -12,12 +12,25 @@ public class MarketDataApiProperties {
     private final Edinet edinet = new Edinet();
     private final Fmp fmp = new Fmp();
 
+    // true の場合、EDINET・FMP・yfinance-service への実際の外部通信を行わず、
+    // MockStockPriceProviderImpl / MockFinancialDataProviderImpl が返すサンプルデータを使う
+    // （環境変数 MARKETDATA_API_MOCK_ENABLED、設定画面の更新ボタン・内蔵スケジューラの両方に効く）。
+    private boolean mockEnabled;
+
     public Edinet getEdinet() {
         return edinet;
     }
 
     public Fmp getFmp() {
         return fmp;
+    }
+
+    public boolean isMockEnabled() {
+        return mockEnabled;
+    }
+
+    public void setMockEnabled(boolean mockEnabled) {
+        this.mockEnabled = mockEnabled;
     }
 
     public static class Edinet {

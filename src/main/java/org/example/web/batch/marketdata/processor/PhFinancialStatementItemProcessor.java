@@ -2,9 +2,7 @@ package org.example.web.batch.marketdata.processor;
 
 import java.util.Optional;
 
-import org.example.web.batch.marketdata.client.FmpFinancialDataProviderImpl;
 import org.example.web.batch.marketdata.client.MockFinancialDataProviderImpl;
-import org.example.web.batch.marketdata.client.RateLimitException;
 import org.example.web.batch.marketdata.client.dto.FinancialStatementData;
 import org.example.web.batch.marketdata.config.MarketDataApiProperties;
 import org.example.web.dao.FinancialStatementDao;
@@ -15,25 +13,23 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
-// ItemProcessor<CompanyEntity, FinancialStatementEntity>。financial_statements の最新
-// (fiscal_year, fiscal_quarter) と FmpFinancialDataProviderImpl.fetchLatestStatement(code) の結果を比較し、
-// API 側が新しければ FinancialStatementEntity を返す。差分がなければ null を返し chunk から除外する（設計書 4.3.1 参照）。
+// ItemProcessor<CompanyEntity, FinancialStatementEntity>。フィリピン株向けの実データ取得元
+// （FinancialDataProvider実装）は現状存在しないため、モックモード（marketdata.api.mock-enabled=true）の
+// ときのみ MockFinancialDataProviderImpl のサンプルデータを返し、それ以外は常に null（対象外としてスキップ）を返す。
+// UsFinancialStatementItemProcessor と同じ差分比較（isNewer）ロジックを流用する。
 @Component
-public class UsFinancialStatementItemProcessor implements ItemProcessor<CompanyEntity, FinancialStatementEntity> {
+public class PhFinancialStatementItemProcessor implements ItemProcessor<CompanyEntity, FinancialStatementEntity> {
 
-    private static final Logger log = LoggerFactory.getLogger(UsFinancialStatementItemProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(PhFinancialStatementItemProcessor.class);
 
-    private final FmpFinancialDataProviderImpl fmpFinancialDataProvider;
     private final MockFinancialDataProviderImpl mockFinancialDataProvider;
     private final FinancialStatementDao financialStatementDao;
     private final MarketDataApiProperties apiProperties;
 
-    public UsFinancialStatementItemProcessor(
-            FmpFinancialDataProviderImpl fmpFinancialDataProvider,
+    public PhFinancialStatementItemProcessor(
             MockFinancialDataProviderImpl mockFinancialDataProvider,
             FinancialStatementDao financialStatementDao,
             MarketDataApiProperties apiProperties) {
-        this.fmpFinancialDataProvider = fmpFinancialDataProvider;
         this.mockFinancialDataProvider = mockFinancialDataProvider;
         this.financialStatementDao = financialStatementDao;
         this.apiProperties = apiProperties;
@@ -41,18 +37,12 @@ public class UsFinancialStatementItemProcessor implements ItemProcessor<CompanyE
 
     @Override
     public FinancialStatementEntity process(CompanyEntity company) {
-        FinancialStatementData apiData;
-        try {
-            apiData = apiProperties.isMockEnabled()
-                    ? mockFinancialDataProvider.fetchLatestStatement(company.getCode())
-                    : fmpFinancialDataProvider.fetchLatestStatement(company.getCode());
-        } catch (RateLimitException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("財務諸表の取得に失敗しました。次回バッチで再取得します: companyId={}, code={}",
-                    company.getId(), company.getCode(), e);
+        if (!apiProperties.isMockEnabled()) {
+            // フィリピン株の実データ取得元は未実装のため常にスキップする
             return null;
         }
+
+        FinancialStatementData apiData = mockFinancialDataProvider.fetchLatestStatement(company.getCode());
         if (apiData == null || apiData.fiscalYear() == null || apiData.fiscalQuarter() == null
                 || apiData.endDate() == null) {
             log.warn("財務諸表データが取得できませんでした（対象銘柄なし）: companyId={}, code={}",
@@ -62,7 +52,6 @@ public class UsFinancialStatementItemProcessor implements ItemProcessor<CompanyE
 
         Optional<FinancialStatementEntity> dbLatest = financialStatementDao.selectLatestByCompanyId(company.getId());
         if (dbLatest.isPresent() && !isNewer(apiData, dbLatest.get())) {
-            // DB より新しい四半期がなければ何もしない（冪等要件、設計書 4.3.1 参照）
             return null;
         }
 

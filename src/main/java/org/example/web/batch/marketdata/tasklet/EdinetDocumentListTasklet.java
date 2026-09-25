@@ -7,9 +7,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.example.web.batch.marketdata.client.EdinetFinancialDataProviderImpl;
+import org.example.web.batch.marketdata.client.MockSampleCompanies;
 import org.example.web.batch.marketdata.client.RateLimitException;
 import org.example.web.batch.marketdata.client.dto.EdinetDocumentListItem;
 import org.example.web.batch.marketdata.client.dto.EdinetMatchedDocument;
+import org.example.web.batch.marketdata.config.MarketDataApiProperties;
 import org.example.web.batch.marketdata.reader.EdinetMatchedDocumentItemReader;
 import org.example.web.dao.CompanyDao;
 import org.example.web.entity.CompanyEntity;
@@ -36,18 +38,48 @@ public class EdinetDocumentListTasklet implements Tasklet {
 
     private final EdinetFinancialDataProviderImpl edinetFinancialDataProvider;
     private final CompanyDao companyDao;
+    private final MarketDataApiProperties apiProperties;
     private final RetryTemplate retryTemplate;
 
     public EdinetDocumentListTasklet(
             EdinetFinancialDataProviderImpl edinetFinancialDataProvider,
-            CompanyDao companyDao) {
+            CompanyDao companyDao,
+            MarketDataApiProperties apiProperties) {
         this.edinetFinancialDataProvider = edinetFinancialDataProvider;
         this.companyDao = companyDao;
+        this.apiProperties = apiProperties;
         this.retryTemplate = buildRetryTemplate();
     }
 
     @Override
     public RepeatStatus execute(@NonNull StepContribution contribution, @NonNull ChunkContext chunkContext) {
+        List<CompanyEntity> jpCompanies = companyDao.selectActiveByCountryCode("JP");
+
+        // モックモードでは EDINET への実通信を一切行わず、サンプル対象銘柄のみの合成リストを使う。
+        List<EdinetMatchedDocument> matched = apiProperties.isMockEnabled()
+                ? buildMockMatchedDocuments(jpCompanies)
+                : fetchRealMatchedDocuments(jpCompanies);
+
+        chunkContext.getStepContext().getStepExecution().getExecutionContext()
+                .put(EdinetMatchedDocumentItemReader.EXECUTION_CONTEXT_KEY, matched);
+
+        return RepeatStatus.FINISHED;
+    }
+
+    private List<EdinetMatchedDocument> buildMockMatchedDocuments(List<CompanyEntity> jpCompanies) {
+        List<EdinetMatchedDocument> matched = jpCompanies.stream()
+                .filter(company -> MockSampleCompanies.JP_CODES.contains(company.getCode()))
+                .map(company -> new EdinetMatchedDocument(
+                        company.getId(),
+                        MockSampleCompanies.JP_MOCK_DOC_ID_PREFIX + company.getCode(),
+                        "120",
+                        LocalDate.now()))
+                .toList();
+        log.info("モックモードのため EDINET への実通信を行わず、サンプル対象銘柄のみを処理します: {}件", matched.size());
+        return matched;
+    }
+
+    private List<EdinetMatchedDocument> fetchRealMatchedDocuments(List<CompanyEntity> jpCompanies) {
         LocalDate today = LocalDate.now();
 
         // documents.json の取得失敗は個別銘柄の失敗ではなくJob全体に影響するため、
@@ -57,7 +89,6 @@ public class EdinetDocumentListTasklet implements Tasklet {
             return edinetFinancialDataProvider.fetchDocumentList(today);
         });
 
-        List<CompanyEntity> jpCompanies = companyDao.selectActiveByCountryCode("JP");
         Map<String, Integer> codeToCompanyId = jpCompanies.stream()
                 .collect(Collectors.toMap(CompanyEntity::getCode, CompanyEntity::getId, (a, b) -> a));
 
@@ -78,11 +109,7 @@ public class EdinetDocumentListTasklet implements Tasklet {
         }
 
         log.info("EDINET 書類一覧の絞り込み結果: 全{}件中 自社銘柄と一致={}件", documents.size(), matched.size());
-
-        chunkContext.getStepContext().getStepExecution().getExecutionContext()
-                .put(EdinetMatchedDocumentItemReader.EXECUTION_CONTEXT_KEY, matched);
-
-        return RepeatStatus.FINISHED;
+        return matched;
     }
 
     private static RetryTemplate buildRetryTemplate() {

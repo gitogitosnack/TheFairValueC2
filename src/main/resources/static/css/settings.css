@@ -88,6 +88,11 @@
     margin-top: 2px;
 }
 
+.toggle-row .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .toggle-switch {
     position: relative;
     display: inline-block;
@@ -246,6 +251,36 @@
 }
 
 .marketdata-sync-status.error {
+    color: var(--ml-danger);
+}
+
+.marketdata-sync-result-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.marketdata-sync-result-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--ml-text-muted);
+}
+
+.marketdata-sync-result-item i {
+    margin-top: 2px;
+}
+
+.marketdata-sync-result-item.success i {
+    color: var(--ml-accent);
+}
+
+.marketdata-sync-result-item.error i {
     color: var(--ml-danger);
 }
 

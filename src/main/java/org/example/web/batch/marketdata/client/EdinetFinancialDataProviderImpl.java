@@ -19,6 +19,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 // FinancialDataProvider の日本株向け実装。EDINET API v2（documents.json / documents/{docID}）を
 // 呼び出す（設計書 5.1 参照）。実際の書類一覧取得・絞り込みは EdinetDocumentListTasklet が担うが、
@@ -71,6 +72,11 @@ public class EdinetFinancialDataProviderImpl implements FinancialDataProvider {
                     .body(EdinetDocumentListResponse.class);
         } catch (HttpClientErrorException.TooManyRequests e) {
             throw new RateLimitException("EDINET documents.json rate limited: date=" + date, e);
+        }
+        if (response != null && response.statusCode() != null && response.statusCode() != 200) {
+            throw new EdinetApiException(
+                    "EDINET documents.json returned an error: StatusCode=" + response.statusCode()
+                            + ", message=" + response.message());
         }
         if (response == null || response.results() == null) {
             return List.of();
@@ -253,8 +259,13 @@ public class EdinetFinancialDataProviderImpl implements FinancialDataProvider {
         return null;
     }
 
+    // 正常時は results（StatusCode は含まれない）、エラー時は StatusCode/message のみが返る
+    // （例: {"StatusCode": 401, "message": "Access denied due to invalid subscription key..."}）。
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record EdinetDocumentListResponse(List<EdinetDocument> results) {
+    private record EdinetDocumentListResponse(
+            @JsonProperty("StatusCode") Integer statusCode,
+            String message,
+            List<EdinetDocument> results) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

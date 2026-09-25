@@ -228,25 +228,14 @@
 
                 <div class="toggle-row">
                     <div class="toggle-row-text">
-                        <div class="toggle-title">日次株価の更新</div>
-                        <div class="toggle-desc">全銘柄の株価・出来高・時価総額・発行済株式数を取得します</div>
+                        <div class="toggle-title">株価・財務諸表の更新</div>
+                        <div class="toggle-desc">全銘柄の株価・出来高・時価総額・発行済株式数と、財務諸表（米国株→日本株の順）を取得し、分析指標も再計算します</div>
                     </div>
-                    <button type="button" class="btn btn-primary" data-role="sync-quote">
-                        <i class="fa-solid fa-chart-line"></i>今すぐ更新
+                    <button type="button" class="btn btn-primary" data-role="sync-market-data">
+                        <i class="fa-solid fa-rotate"></i>今すぐ更新
                     </button>
                 </div>
-                <div class="marketdata-sync-status" data-role="sync-quote-status"></div>
-
-                <div class="toggle-row">
-                    <div class="toggle-row-text">
-                        <div class="toggle-title">財務諸表の更新</div>
-                        <div class="toggle-desc">全銘柄の財務諸表（米国株→日本株の順）を取得し、分析指標も再計算します</div>
-                    </div>
-                    <button type="button" class="btn btn-primary" data-role="sync-financial-statement">
-                        <i class="fa-solid fa-file-invoice-dollar"></i>今すぐ更新
-                    </button>
-                </div>
-                <div class="marketdata-sync-status" data-role="sync-financial-statement-status"></div>
+                <div class="marketdata-sync-status" data-role="sync-market-data-status"></div>
             </section>
 
         </div>
@@ -264,6 +253,22 @@
             </div>
         </section>
 
+    </div>
+
+    <!-- ================= 財務データ更新 結果ダイアログ ================= -->
+    <div class="modal" data-role="market-data-sync-result-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>更新結果</h2>
+                <span class="close-btn" data-role="market-data-sync-result-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <ul class="marketdata-sync-result-list" data-role="market-data-sync-result-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-role="market-data-sync-result-close">閉じる</button>
+            </div>
+        </div>
     </div>
 
     <script th:src="@{/js/settings.js}"></script>

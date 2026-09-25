@@ -1,9 +1,12 @@
 package org.example.web.batch.marketdata.processor;
 
 import org.example.web.batch.marketdata.client.EdinetFinancialDataProviderImpl;
+import org.example.web.batch.marketdata.client.MockFinancialDataProviderImpl;
+import org.example.web.batch.marketdata.client.MockSampleCompanies;
 import org.example.web.batch.marketdata.client.RateLimitException;
 import org.example.web.batch.marketdata.client.dto.EdinetMatchedDocument;
 import org.example.web.batch.marketdata.client.dto.FinancialStatementData;
+import org.example.web.batch.marketdata.config.MarketDataApiProperties;
 import org.example.web.entity.FinancialStatementEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,17 +22,26 @@ public class JpFinancialStatementItemProcessor implements ItemProcessor<EdinetMa
     private static final Logger log = LoggerFactory.getLogger(JpFinancialStatementItemProcessor.class);
 
     private final EdinetFinancialDataProviderImpl edinetFinancialDataProvider;
+    private final MockFinancialDataProviderImpl mockFinancialDataProvider;
+    private final MarketDataApiProperties apiProperties;
 
-    public JpFinancialStatementItemProcessor(EdinetFinancialDataProviderImpl edinetFinancialDataProvider) {
+    public JpFinancialStatementItemProcessor(
+            EdinetFinancialDataProviderImpl edinetFinancialDataProvider,
+            MockFinancialDataProviderImpl mockFinancialDataProvider,
+            MarketDataApiProperties apiProperties) {
         this.edinetFinancialDataProvider = edinetFinancialDataProvider;
+        this.mockFinancialDataProvider = mockFinancialDataProvider;
+        this.apiProperties = apiProperties;
     }
 
     @Override
     public FinancialStatementEntity process(EdinetMatchedDocument matchedDocument) {
         FinancialStatementData apiData;
         try {
-            apiData = edinetFinancialDataProvider.fetchStatementDocument(
-                    matchedDocument.docId(), matchedDocument.docTypeCode(), matchedDocument.periodEnd());
+            apiData = apiProperties.isMockEnabled()
+                    ? fetchMockStatement(matchedDocument)
+                    : edinetFinancialDataProvider.fetchStatementDocument(
+                            matchedDocument.docId(), matchedDocument.docTypeCode(), matchedDocument.periodEnd());
         } catch (RateLimitException e) {
             throw e;
         } catch (Exception e) {
@@ -44,5 +56,16 @@ public class JpFinancialStatementItemProcessor implements ItemProcessor<EdinetMa
         }
 
         return FinancialStatementEntityMapper.toEntity(matchedDocument.companyId(), apiData);
+    }
+
+    // モック時は EdinetDocumentListTasklet が docID に "MOCK-" + 銘柄コード を合成しているため、
+    // それを復元して MockFinancialDataProviderImpl（銘柄コード単発取得）に委譲する。
+    private FinancialStatementData fetchMockStatement(EdinetMatchedDocument matchedDocument) {
+        String docId = matchedDocument.docId();
+        if (docId == null || !docId.startsWith(MockSampleCompanies.JP_MOCK_DOC_ID_PREFIX)) {
+            return null;
+        }
+        String code = docId.substring(MockSampleCompanies.JP_MOCK_DOC_ID_PREFIX.length());
+        return mockFinancialDataProvider.fetchLatestStatement(code);
     }
 }

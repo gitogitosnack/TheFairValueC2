@@ -1,7 +1,9 @@
 package org.example.web.batch.marketdata.controller;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.ToLongFunction;
 
 import org.example.web.batch.marketdata.service.BatchExecutionLockService;
 import org.example.web.batch.marketdata.service.BatchType;
@@ -12,6 +14,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,8 +61,8 @@ public class MarketDataSyncRestController {
 
     private ResponseEntity<Map<String, Object>> runJob(BatchType batchType, @NonNull Job job) {
         if (!lockService.tryLock(batchType)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "現在実行中のため開始できません"));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorBody(
+                    MarketDataSyncFailureCategory.LOCKED, "現在実行中のため開始できません"));
         }
         try {
             JobParameters jobParameters = new JobParametersBuilder()
@@ -68,24 +71,53 @@ public class MarketDataSyncRestController {
                     .toJobParameters();
             JobExecution execution = jobLauncher.run(job, jobParameters);
             boolean success = execution.getStatus() == BatchStatus.COMPLETED;
-            return ResponseEntity.ok(Map.of(
-                    "message", success ? "実行が完了しました" : "実行が完了しましたが一部失敗しました",
-                    "status", execution.getStatus().toString(),
-                    "readCount", sumStepMetric(execution, org.springframework.batch.core.StepExecution::getReadCount),
-                    "writeCount", sumStepMetric(execution, org.springframework.batch.core.StepExecution::getWriteCount),
-                    "skipCount", sumStepMetric(execution, org.springframework.batch.core.StepExecution::getSkipCount)));
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("success", success);
+            body.put("status", execution.getStatus().toString());
+            body.put("readCount", sumStepMetric(execution, StepExecution::getReadCount));
+            body.put("writeCount", sumStepMetric(execution, StepExecution::getWriteCount));
+            body.put("skipCount", sumStepMetric(execution, StepExecution::getSkipCount));
+
+            if (success) {
+                body.put("message", "実行が完了しました");
+            } else {
+                MarketDataSyncFailureCategory category = classifyFailure(execution);
+                log.error("[{}] 手動実行がFAILED/STOPPEDで終了しました: status={}, failures={}",
+                        batchType, execution.getStatus(), execution.getAllFailureExceptions());
+                body.put("message", "実行が完了しましたが一部失敗しました");
+                body.put("errorCategory", category.name());
+                body.put("errorMessage", category.getMessage());
+            }
+            return ResponseEntity.ok(body);
         } catch (Exception e) {
             log.error("[{}] 手動実行でJob起動に失敗しました", batchType, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "実行に失敗しました: " + e.getMessage()));
+            MarketDataSyncFailureCategory category = MarketDataSyncFailureCategory.classify(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody(
+                    category, "実行に失敗しました"));
         } finally {
             lockService.unlock(batchType);
         }
     }
 
-    private static long sumStepMetric(
-            JobExecution execution,
-            java.util.function.ToLongFunction<org.springframework.batch.core.StepExecution> extractor) {
+    private static MarketDataSyncFailureCategory classifyFailure(JobExecution execution) {
+        return execution.getAllFailureExceptions().stream()
+                .map(MarketDataSyncFailureCategory::classify)
+                .filter(category -> category != MarketDataSyncFailureCategory.UNKNOWN)
+                .findFirst()
+                .orElse(MarketDataSyncFailureCategory.UNKNOWN);
+    }
+
+    private static Map<String, Object> errorBody(MarketDataSyncFailureCategory category, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", false);
+        body.put("message", message);
+        body.put("errorCategory", category.name());
+        body.put("errorMessage", category.getMessage());
+        return body;
+    }
+
+    private static long sumStepMetric(JobExecution execution, ToLongFunction<StepExecution> extractor) {
         return execution.getStepExecutions().stream().mapToLong(extractor).sum();
     }
 }
