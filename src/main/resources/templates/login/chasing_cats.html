@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>可愛い猫が寄り添う ログイン画面</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0f1117;
+    }
+
+    #catCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      pointer-events: none;
+    }
+
+    .login-card {
+      pointer-events: auto;
+      width: 360px;
+      padding: 36px 30px;
+      background: rgba(22, 27, 38, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .login-card h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #f3f4f6;
+    }
+
+    .login-card p.subtitle {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 24px;
+    }
+
+    .input-group {
+      margin-bottom: 18px;
+      text-align: left;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #d1d5db;
+      margin-bottom: 6px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, #ea580c, #f97316);
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(249, 115, 22, 0.4);
+    }
+
+    .footer-links {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .footer-links a {
+      color: #fb923c;
+      text-decoration: none;
+      margin-left: 4px;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="catCanvas"></canvas>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <h2>Welcome Back</h2>
+      <p class="subtitle">アカウント情報を入力してください</p>
+
+      <form onsubmit="event.preventDefault();">
+        <div class="input-group">
+          <label for="email">メールアドレス</label>
+          <input type="email" id="email" placeholder="example@domain.com" required>
+        </div>
+
+        <div class="input-group">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="submit-btn">ログイン</button>
+      </form>
+
+      <div class="footer-links">
+        アカウントをお持ちでないですか？<a href="#">新規登録</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('catCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const mouse = { x: canvas.width / 2, y: canvas.height / 2, active: false, timer: null };
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+
+      clearTimeout(mouse.timer);
+      mouse.timer = setTimeout(() => {
+        mouse.active = false;
+      }, 3000);
+    });
+
+    class CuteCat {
+      constructor(type, x, y, speed, targetOffset) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.targetOffset = targetOffset;
+        this.state = 'idle';
+        this.dir = 1; // 1: 右向き, -1: 左向き
+        this.stateTimer = 0;
+        this.animFrame = 0;
+        this.targetX = x;
+        this.targetY = y;
+      }
+
+      update() {
+        this.animFrame++;
+
+        if (mouse.active) {
+          this.state = 'walk';
+          this.targetX = mouse.x + this.targetOffset.x;
+          this.targetY = mouse.y + this.targetOffset.y;
+        } else {
+          this.stateTimer--;
+          if (this.stateTimer <= 0) {
+            const rand = Math.random();
+            if (rand < 0.4) {
+              this.state = 'walk';
+              this.targetX = Math.random() * (canvas.width - 140) + 70;
+              this.targetY = Math.random() * (canvas.height - 140) + 70;
+              this.stateTimer = Math.floor(Math.random() * 200) + 100;
+            } else if (rand < 0.7) {
+              this.state = 'groom';
+              this.stateTimer = Math.floor(Math.random() * 180) + 90;
+            } else if (rand < 0.9) {
+              this.state = 'sleep';
+              this.stateTimer = Math.floor(Math.random() * 300) + 150;
+            } else {
+              this.state = 'idle';
+              this.stateTimer = Math.floor(Math.random() * 120) + 60;
+            }
+          }
+        }
+
+        if (this.state === 'walk') {
+          const dx = this.targetX - this.x;
+          const dy = this.targetY - this.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist > 15) {
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+            
+            // ★進行方向の判定を修正（右に進むときは1、左に進むときは-1）
+            // 猫の描画パーツは頭が「左（負のX方向）」にあるため、左移動（dx < 0）のとき標準向き（dir = 1）、右移動（dx >= 0）のとき反転（dir = -1）
+            this.dir = dx >= 0 ? -1 : 1;
+          } else if (!mouse.active) {
+            this.state = 'idle';
+          }
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.dir, 1);
+
+        const bounceY = (this.state === 'walk') ? Math.sin(this.animFrame * 0.25) * 3 : 0;
+
+        const mainOrange = '#ff9233';
+        const stripeOrange = '#c95100';
+        const whiteColor = '#ffffff';
+        const pinkColor = '#ffb3c1';
+        const eyeClosedColor = '#5c3317';
+
+        // 影
+        ctx.beginPath();
+        ctx.ellipse(0, 8, 22, 7, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fill();
+
+        if (this.state === 'sleep') {
+          // --- 寝姿 ---
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 20, 15, 0, 0, Math.PI * 2);
+          ctx.fillStyle = mainOrange;
+          ctx.fill();
+
+          if (this.type === 'chashiro') {
+            ctx.beginPath();
+            ctx.ellipse(-2, 3, 14, 10, 0, 0, Math.PI * 2);
+            ctx.fillStyle = whiteColor;
+            ctx.fill();
+          }
+
+          // 極細（1px）の真っ直ぐな閉じ目
+          ctx.beginPath();
+          ctx.moveTo(-11, -1);
+          ctx.lineTo(-7, -1);
+          ctx.moveTo(-4, -1);
+          ctx.lineTo(0, -1);
+          ctx.strokeStyle = eyeClosedColor;
+          ctx.lineWidth = 1.0;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          // 鼻
+          ctx.beginPath();
+          ctx.arc(-5.5, 1.5, 1, 0, Math.PI * 2);
+          ctx.fillStyle = pinkColor;
+          ctx.fill();
+
+          // 「z」表示
+          if (Math.floor(this.animFrame / 25) % 2 === 0) {
+            ctx.fillStyle = '#f3f4f6';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('z', -18, -14);
+          }
+
+        } else {
+          // --- 通常・歩き・毛づくろい ---
+          const headY = -18 + bounceY;
+
+          // 1. 胴体
+          ctx.beginPath();
+          ctx.ellipse(2, -6 + bounceY, 18, 14, 0, 0, Math.PI * 2);
+          ctx.fillStyle = mainOrange;
+          ctx.fill();
+
+          if (this.type === 'chashiro') {
+            ctx.beginPath();
+            ctx.ellipse(0, -3 + bounceY, 13, 10, 0, 0, Math.PI * 2);
+            ctx.fillStyle = whiteColor;
+            ctx.fill();
+          }
+
+          // トラ柄
+          ctx.strokeStyle = stripeOrange;
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(6, -14 + bounceY); ctx.lineTo(6, -5 + bounceY);
+          ctx.moveTo(12, -12 + bounceY); ctx.lineTo(12, -3 + bounceY);
+          ctx.stroke();
+
+          // 2. 尻尾
+          const tailAngle = Math.sin(this.animFrame * 0.15) * 0.4;
+          ctx.save();
+          ctx.translate(16, -8 + bounceY);
+          ctx.rotate(tailAngle);
+          ctx.beginPath();
+          ctx.quadraticCurveTo(12, -8, 10, -18);
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = mainOrange;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          ctx.restore();
+
+          // 3. 頭
+          ctx.beginPath();
+          ctx.arc(-8, headY, 14, 0, Math.PI * 2);
+          ctx.fillStyle = mainOrange;
+          ctx.fill();
+
+          if (this.type === 'chashiro') {
+            ctx.beginPath();
+            ctx.moveTo(-8, headY - 14);
+            ctx.lineTo(-1, headY + 5);
+            ctx.lineTo(-15, headY + 5);
+            ctx.closePath();
+            ctx.fillStyle = whiteColor;
+            ctx.fill();
+          }
+
+          // 4. 耳
+          ctx.beginPath();
+          ctx.moveTo(-17, headY - 8); ctx.lineTo(-14, headY - 21); ctx.lineTo(-7, headY - 11);
+          ctx.fillStyle = mainOrange;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(-15, headY - 9); ctx.lineTo(-13, headY - 18); ctx.lineTo(-8, headY - 11);
+          ctx.fillStyle = pinkColor;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(-8, headY - 10); ctx.lineTo(-3, headY - 21); ctx.lineTo(1, headY - 8);
+          ctx.fillStyle = mainOrange;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(-7, headY - 10); ctx.lineTo(-3, headY - 18); ctx.lineTo(-1, headY - 9);
+          ctx.fillStyle = pinkColor;
+          ctx.fill();
+
+          // 5. ほっぺチーク
+          ctx.beginPath();
+          ctx.ellipse(-14, headY + 3, 3, 2, 0, 0, Math.PI * 2);
+          ctx.ellipse(-2, headY + 3, 3, 2, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 179, 193, 0.6)';
+          ctx.fill();
+
+          // 6. 目の描画
+          if (this.state === 'groom') {
+            // 毛づくろい中（細くまばたき）
+            ctx.beginPath();
+            ctx.moveTo(-14, headY - 2); ctx.lineTo(-10, headY - 2);
+            ctx.moveTo(-6, headY - 2);  ctx.lineTo(-2, headY - 2);
+            ctx.strokeStyle = eyeClosedColor;
+            ctx.lineWidth = 1.0;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // 鼻
+            ctx.beginPath();
+            ctx.arc(-8, headY + 1, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = pinkColor;
+            ctx.fill();
+
+          } else {
+            // 通常時（丸い黒目 ＋ ハイライト）
+            ctx.beginPath();
+            ctx.arc(-12, headY - 2, 3.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#2b1000';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-13, headY - 3.5, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = whiteColor;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(-4, headY - 2, 3.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#2b1000';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-5, headY - 3.5, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = whiteColor;
+            ctx.fill();
+
+            // 鼻
+            ctx.beginPath();
+            ctx.arc(-8, headY + 1, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = pinkColor;
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+    }
+
+    const cat1 = new CuteCat('chatora', 120, 120, 3.0, { x: -55, y: -25 });
+    const cat2 = new CuteCat('chashiro', 180, 180, 2.3, { x: 45, y: 30 });
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      cat1.update();
+      cat1.draw();
+
+      cat2.update();
+      cat2.draw();
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
