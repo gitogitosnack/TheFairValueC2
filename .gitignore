@@ -57,3 +57,9 @@ Thumbs.db
 
 __pycache__/
 *.pyc
+
+# 環境変数ファイル（絶対コミットNG）
+.env
+.env.local
+.env.*.local
+*.env
