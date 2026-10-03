@@ -705,8 +705,9 @@ sequenceDiagram
 
 - 無料登録で API キーを取得（Starter プラン、1 日あたりのリクエスト数に上限あり。実装時に
   最新の無料枠上限をドキュメントで確認する）
-- 株価取得: `GET /api/v3/quote/{symbol}` で現在値・出来高・時価総額・発行済株式数などを取得
-- 財務諸表取得: `GET /api/v3/income-statement/{symbol}`、`balance-sheet-statement`、
+- 株価取得: `GET /stable/quote?symbol={symbol}` で現在値・出来高・時価総額などを取得（stable 版は発行済株式数を返さないため `marketCap / price` で算出）。
+  旧 `/api/v3` は 2025-08-31 以前からの契約者専用となり、新規キーでは `Legacy Endpoint` エラーになる
+- 財務諸表取得: `GET /stable/income-statement?symbol={symbol}`、`balance-sheet-statement`、
   `cash-flow-statement` の四半期版（`?period=quarter`）で損益計算書・貸借対照表・キャッシュフロー
   計算書を取得
 - 財務比率（ROE・PER 等）を計算済みで返すエンドポイント（`ratios`）もあるが、11 章 回答 6 の通り

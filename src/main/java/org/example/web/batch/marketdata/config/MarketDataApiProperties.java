@@ -56,7 +56,7 @@ public class MarketDataApiProperties {
 
     public static class Fmp {
         private String apiKey;
-        private String baseUrl = "https://financialmodelingprep.com/api/v3";
+        private String baseUrl = "https://financialmodelingprep.com/stable";
 
         public String getApiKey() {
             return apiKey;

@@ -10,10 +10,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 // FinancialDataProvider の米国株向け実装。Financial Modeling Prep（FMP）の
-// income-statement / balance-sheet-statement / cash-flow-statement（?period=quarter）を取得する（設計書 5.2 参照）。
+// stable 版の income-statement / balance-sheet-statement / cash-flow-statement（?symbol=...&period=quarter）を
+// 取得する（設計書 5.2 参照）。stable 版でフィールド名が変わった項目は旧 v3 名も @JsonAlias で受け付ける。
 @Component("fmpFinancialDataProvider")
 public class FmpFinancialDataProviderImpl implements FinancialDataProvider {
 
@@ -31,14 +33,14 @@ public class FmpFinancialDataProviderImpl implements FinancialDataProvider {
 
     @Override
     public FinancialStatementData fetchLatestStatement(String code) {
-        FmpIncomeStatement income = fetchFirst("/income-statement/{symbol}", code, FmpIncomeStatement[].class);
+        FmpIncomeStatement income = fetchFirst("/income-statement", code, FmpIncomeStatement[].class);
         if (income == null) {
             return null;
         }
-        FmpBalanceSheet balance = fetchFirst("/balance-sheet-statement/{symbol}", code, FmpBalanceSheet[].class);
-        FmpCashFlow cashFlow = fetchFirst("/cash-flow-statement/{symbol}", code, FmpCashFlow[].class);
+        FmpBalanceSheet balance = fetchFirst("/balance-sheet-statement", code, FmpBalanceSheet[].class);
+        FmpCashFlow cashFlow = fetchFirst("/cash-flow-statement", code, FmpCashFlow[].class);
 
-        Integer fiscalYear = income.calendarYear() != null ? Integer.valueOf(income.calendarYear()) : null;
+        Integer fiscalYear = income.fiscalYear() != null ? Integer.valueOf(income.fiscalYear()) : null;
         String fiscalQuarter = income.period();
 
         BigDecimal bps = (balance != null && balance.totalStockholdersEquity() != null
@@ -77,10 +79,11 @@ public class FmpFinancialDataProviderImpl implements FinancialDataProvider {
         try {
             response = restClient.get()
                     .uri(uriBuilder -> uriBuilder.path(path)
+                            .queryParam("symbol", code)
                             .queryParam("period", "quarter")
                             .queryParam("limit", "1")
                             .queryParam("apikey", apiProperties.getFmp().getApiKey())
-                            .build(code))
+                            .build())
                     .retrieve()
                     .body(arrayType);
         } catch (HttpClientErrorException.TooManyRequests e) {
@@ -95,7 +98,7 @@ public class FmpFinancialDataProviderImpl implements FinancialDataProvider {
     private record FmpIncomeStatement(
             LocalDate date,
             String period,
-            String calendarYear,
+            @JsonAlias("calendarYear") String fiscalYear,
             BigDecimal revenue,
             BigDecimal grossProfit,
             BigDecimal operatingIncome,
@@ -119,17 +122,21 @@ public class FmpFinancialDataProviderImpl implements FinancialDataProvider {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record FmpCashFlow(
             BigDecimal operatingCashFlow,
-            BigDecimal netCashUsedForInvestingActivites,
-            BigDecimal netCashUsedProvidedByFinancingActivities,
+            @JsonAlias("netCashUsedForInvestingActivites") BigDecimal netCashProvidedByInvestingActivities,
+            @JsonAlias("netCashUsedProvidedByFinancingActivities") BigDecimal netCashProvidedByFinancingActivities,
             BigDecimal freeCashFlow,
-            BigDecimal dividendsPaid) {
+            @JsonAlias("dividendsPaid") BigDecimal netDividendsPaid) {
 
         BigDecimal investingCashFlow() {
-            return netCashUsedForInvestingActivites;
+            return netCashProvidedByInvestingActivities;
         }
 
         BigDecimal financingCashFlow() {
-            return netCashUsedProvidedByFinancingActivities;
+            return netCashProvidedByFinancingActivities;
+        }
+
+        BigDecimal dividendsPaid() {
+            return netDividendsPaid;
         }
     }
 }

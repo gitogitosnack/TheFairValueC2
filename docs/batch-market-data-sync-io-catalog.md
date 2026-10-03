@@ -99,13 +99,13 @@ EDINETは銘柄コード単発取得APIを持たないため、インタフェ�
 marketdata.api.edinet.api-key=${EDINET_API_KEY:}
 marketdata.api.edinet.base-url=${EDINET_BASE_URL:https://api.edinet-fsa.go.jp/api/v2}
 marketdata.api.fmp.api-key=${FMP_API_KEY:}
-marketdata.api.fmp.base-url=${FMP_BASE_URL:https://financialmodelingprep.com/api/v3}
+marketdata.api.fmp.base-url=${FMP_BASE_URL:https://financialmodelingprep.com/stable}
 ```
 
 | メソッド | 入力 | 出力 |
 | --- | --- | --- |
 | `getEdinet()` / `getFmp()` | なし | `Edinet` / `Fmp`（内部static class）インスタンス |
-| `Edinet#getApiKey()/getBaseUrl()`, `Fmp#getApiKey()/getBaseUrl()` | なし | `String`（既定値: EDINET baseUrl は `https://api.edinet-fsa.go.jp/api/v2`、FMP baseUrl は `https://financialmodelingprep.com/api/v3`、apiKeyは既定 `""`） |
+| `Edinet#getApiKey()/getBaseUrl()`, `Fmp#getApiKey()/getBaseUrl()` | なし | `String`（既定値: EDINET baseUrl は `https://api.edinet-fsa.go.jp/api/v2`、FMP baseUrl は `https://financialmodelingprep.com/stable`、apiKeyは既定 `""`） |
 | 各 `set*()` | `String` | Spring Boot のプロパティバインディングから呼ばれる（アプリコードから直接呼ぶことは想定しない） |
 
 呼び出し元: `EdinetFinancialDataProviderImpl`, `FmpFinancialDataProviderImpl`, `FmpStockPriceProviderImpl`（コンストラクタでbaseUrl/apiKeyを読む）。

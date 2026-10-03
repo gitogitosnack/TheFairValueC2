@@ -18,10 +18,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class FmpFinancialDataProviderImplTest {
 
-    private static final String BASE = "https://financialmodelingprep.com/api/v3";
-    private static final String INCOME_URI = BASE + "/income-statement/AAPL?period=quarter&limit=1&apikey=test-api-key";
-    private static final String BALANCE_URI = BASE + "/balance-sheet-statement/AAPL?period=quarter&limit=1&apikey=test-api-key";
-    private static final String CASH_FLOW_URI = BASE + "/cash-flow-statement/AAPL?period=quarter&limit=1&apikey=test-api-key";
+    private static final String BASE = "https://financialmodelingprep.com/stable";
+    private static final String INCOME_URI = BASE + "/income-statement?symbol=AAPL&period=quarter&limit=1&apikey=test-api-key";
+    private static final String BALANCE_URI = BASE + "/balance-sheet-statement?symbol=AAPL&period=quarter&limit=1&apikey=test-api-key";
+    private static final String CASH_FLOW_URI = BASE + "/cash-flow-statement?symbol=AAPL&period=quarter&limit=1&apikey=test-api-key";
 
     private MockRestServiceServer server;
 
@@ -38,7 +38,7 @@ class FmpFinancialDataProviderImplTest {
               {
                 "date": "2026-06-30",
                 "period": "Q2",
-                "calendarYear": "2026",
+                "fiscalYear": "2026",
                 "revenue": 100000,
                 "grossProfit": 40000,
                 "operatingIncome": 20000,
@@ -68,10 +68,10 @@ class FmpFinancialDataProviderImplTest {
             [
               {
                 "operatingCashFlow": 25000,
-                "netCashUsedForInvestingActivites": -8000,
-                "netCashUsedProvidedByFinancingActivities": -3000,
+                "netCashProvidedByInvestingActivities": -8000,
+                "netCashProvidedByFinancingActivities": -3000,
                 "freeCashFlow": 17000,
-                "dividendsPaid": -2000
+                "netDividendsPaid": -2000
               }
             ]
             """;

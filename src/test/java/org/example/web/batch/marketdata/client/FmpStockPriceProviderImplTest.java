@@ -31,7 +31,7 @@ class FmpStockPriceProviderImplTest {
     @Test
     void fetchLatestQuote_成功時にFMPの応答をStockQuoteDataへ変換すること() {
         FmpStockPriceProviderImpl provider = newProvider();
-        server.expect(requestTo("https://financialmodelingprep.com/api/v3/quote/AAPL?apikey=test-api-key"))
+        server.expect(requestTo("https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=test-api-key"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -62,9 +62,30 @@ class FmpStockPriceProviderImplTest {
     }
 
     @Test
+    void fetchLatestQuote_sharesOutstandingが無いstable版の応答では時価総額と株価から発行済株式数を求めること() {
+        FmpStockPriceProviderImpl provider = newProvider();
+        server.expect(requestTo("https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=test-api-key"))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "symbol": "AAPL",
+                            "price": 200,
+                            "marketCap": 3000000000000,
+                            "timestamp": 1735358400
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        StockQuoteData result = provider.fetchLatestQuote("AAPL");
+
+        assertThat(result.sharesOutstanding()).isEqualTo(15000000000L);
+        server.verify();
+    }
+
+    @Test
     void fetchLatestQuote_空配列の場合はnullを返すこと() {
         FmpStockPriceProviderImpl provider = newProvider();
-        server.expect(requestTo("https://financialmodelingprep.com/api/v3/quote/UNKNOWN?apikey=test-api-key"))
+        server.expect(requestTo("https://financialmodelingprep.com/stable/quote?symbol=UNKNOWN&apikey=test-api-key"))
                 .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
         StockQuoteData result = provider.fetchLatestQuote("UNKNOWN");
@@ -76,7 +97,7 @@ class FmpStockPriceProviderImplTest {
     @Test
     void fetchLatestQuote_404の場合はnullを返すこと() {
         FmpStockPriceProviderImpl provider = newProvider();
-        server.expect(requestTo("https://financialmodelingprep.com/api/v3/quote/UNKNOWN?apikey=test-api-key"))
+        server.expect(requestTo("https://financialmodelingprep.com/stable/quote?symbol=UNKNOWN&apikey=test-api-key"))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         StockQuoteData result = provider.fetchLatestQuote("UNKNOWN");
@@ -88,7 +109,7 @@ class FmpStockPriceProviderImplTest {
     @Test
     void fetchLatestQuote_429の場合はRateLimitExceptionをthrowすること() {
         FmpStockPriceProviderImpl provider = newProvider();
-        server.expect(requestTo("https://financialmodelingprep.com/api/v3/quote/AAPL?apikey=test-api-key"))
+        server.expect(requestTo("https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=test-api-key"))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
         assertThatThrownBy(() -> provider.fetchLatestQuote("AAPL"))
