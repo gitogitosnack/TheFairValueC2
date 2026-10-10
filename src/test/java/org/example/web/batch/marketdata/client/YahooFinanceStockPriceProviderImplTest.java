@@ -42,8 +42,8 @@ class YahooFinanceStockPriceProviderImplTest {
                           "low": 990.0,
                           "close": 1040.0,
                           "volume": 123456,
-                          "marketCap": 999999999.0,
-                          "sharesOutstanding": 987654321
+                          "market_cap": 999999999,
+                          "shares_outstanding": 987654321
                         }
                         """, MediaType.APPLICATION_JSON));
 
@@ -55,6 +55,7 @@ class YahooFinanceStockPriceProviderImplTest {
         assertThat(result.lowPrice()).isEqualByComparingTo("990.0");
         assertThat(result.closePrice()).isEqualByComparingTo("1040.0");
         assertThat(result.volume()).isEqualTo(123456L);
+        assertThat(result.marketCap()).isEqualByComparingTo("999999999");
         assertThat(result.sharesOutstanding()).isEqualTo(987654321L);
         server.verify();
     }

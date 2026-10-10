@@ -10,6 +10,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 // StockPriceProvider の日本株向け実装。Yahoo Finance を直接叩くのではなく、
 // python-services/yfinance-service を RestClientConfig の HTTP クライアントで呼び出すだけの
@@ -76,7 +77,8 @@ public class YahooFinanceStockPriceProviderImpl implements StockPriceProvider {
             BigDecimal low,
             BigDecimal close,
             Long volume,
-            BigDecimal marketCap,
-            Long sharesOutstanding) {
+            // yfinance-service（routers/quote.py）は snake_case で返す
+            @JsonProperty("market_cap") BigDecimal marketCap,
+            @JsonProperty("shares_outstanding") Long sharesOutstanding) {
     }
 }

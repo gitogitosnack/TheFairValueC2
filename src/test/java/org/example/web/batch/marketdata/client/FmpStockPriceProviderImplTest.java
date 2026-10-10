@@ -1,5 +1,7 @@
 package org.example.web.batch.marketdata.client;
 
+import java.time.LocalDate;
+
 import org.example.web.batch.marketdata.client.dto.StockQuoteData;
 import org.example.web.batch.marketdata.config.MarketDataApiProperties;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,8 @@ class FmpStockPriceProviderImplTest {
 
         StockQuoteData result = provider.fetchLatestQuote("AAPL");
 
+        // 1735358400 = 2024-12-28T04:00Z。JST では 12/28 だが米国東部時間では 12/27
+        assertThat(result.date()).isEqualTo(LocalDate.of(2024, 12, 27));
         assertThat(result.closePrice()).isEqualByComparingTo("190.5");
         assertThat(result.openPrice()).isEqualByComparingTo("188.0");
         assertThat(result.highPrice()).isEqualByComparingTo("191.0");

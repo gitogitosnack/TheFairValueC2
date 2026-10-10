@@ -21,6 +21,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Component("fmpStockPriceProvider")
 public class FmpStockPriceProviderImpl implements StockPriceProvider {
 
+    private static final ZoneId US_MARKET_ZONE = ZoneId.of("America/New_York");
+
     private final RestClient restClient;
     private final MarketDataApiProperties apiProperties;
 
@@ -53,9 +55,10 @@ public class FmpStockPriceProviderImpl implements StockPriceProvider {
             return null;
         }
         FmpQuoteResponse quote = response[0];
+        // 取引日は米国市場のタイムゾーンで決める（JVM 既定の JST だと終値時刻が翌日扱いになる）
         LocalDate date = quote.timestamp() != null
-                ? Instant.ofEpochSecond(quote.timestamp()).atZone(ZoneId.systemDefault()).toLocalDate()
-                : LocalDate.now();
+                ? Instant.ofEpochSecond(quote.timestamp()).atZone(US_MARKET_ZONE).toLocalDate()
+                : LocalDate.now(US_MARKET_ZONE);
         return new StockQuoteData(
                 date,
                 quote.open(),
